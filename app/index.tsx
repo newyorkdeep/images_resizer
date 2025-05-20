@@ -53,34 +53,33 @@ export default function Index() {
     const resizedImages = await Promise.all(
       stateImages.map(async (item) => {
         const {manipulateAsync} = require ('expo-image-manipulator');
-        const originalImage = await manipulateAsync(item, [{ resize: {width: 1, height: 1}}]);
-        const originalWidth=originalImage.width;
-        const originalHeight=originalImage.height;
-        let newWidth = w;
-        let newHeight = h;
         
         if (h>0 && w==0) {
-          newWidth=Math.round((originalWidth/originalHeight)*h);
+          const result = await manipulateAsync(item, [{
+            resize: {
+              height: h,
+            }
+          }], {format: SaveFormat.JPEG});
+          return result.uri;
         } else if (h==0 && w>0) {
-          newHeight=Math.round((originalHeight/originalWidth)*w);
+          const result = await manipulateAsync(item, [{
+            resize: {
+              width: w,
+            }
+          }], {format: SaveFormat.JPEG});
+          return result.uri;
         } else if (h > 0 && w > 0) {
-          // Preserve aspect ratio
-          const aspectRatio = originalWidth / originalHeight;
-          if (aspectRatio > 1) {
-            newHeight = Math.round(w / aspectRatio);
-          } else {
-            newWidth = Math.round(h * aspectRatio);
-          }
+          const result = await manipulateAsync(item, [{
+            resize: {
+              width: w,
+              height: h,
+            }
+          }], {format: SaveFormat.JPEG});
+          return result.uri;
         }
-        const result = await manipulateAsync(item, [{
-          resize: {
-            width: newWidth,
-            height: newHeight
-          }
-        }], {format: SaveFormat.JPEG});
-        return result.uri;
-      })
-    );
+        setResizeHeight(0);
+        setResizeWidth(0);
+      }));
     setStateImages(resizedImages);
   };
 
@@ -93,13 +92,13 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <View style={styles.horizview}>
-        <TouchableOpacity style={styles.button1} onPress={pickImage}><Text style={{color: 'white'}}>Upload Images</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={pickImage}><Text style={{color: 'black'}}>Upload Images</Text></TouchableOpacity>
       </View>
       <FlatList scrollEnabled horizontal data={stateImages} renderItem={({item}) => <Image source={{ uri: item }} style={styles.image} />}></FlatList>
       <View style={styles.horizview}>
-        <TouchableOpacity style={styles.button1} onPress={rotateAll}><Text style={{color: 'white'}}>Rotate All</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={rotateAll}><Text style={{color: 'black'}}>Rotate All</Text></TouchableOpacity>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(true)}><Text style={{color:'white'}}>Resize All</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(true)}><Text style={{color:'black'}}>Resize All</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
@@ -111,13 +110,13 @@ export default function Index() {
             <TextInput style={styles.textinput} onChangeText={(value) => {
               setResizeWidth(Number(value));
             }}></TextInput> <p></p>
-            <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModalVisible(false); }}><Text style={{color: 'white', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
             <Text> </Text>
-            <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'white', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={downloadAll}><Text style={{color:'white'}}>Save All</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={downloadAll}><Text style={{color:'black'}}>Save All</Text></TouchableOpacity>
       </View>
     </View>
   );
@@ -139,9 +138,9 @@ const styles = StyleSheet.create({
     margin: 2,
   },
   button1: {
-    backgroundColor: '#5a9477',
-    borderRadius: 8,
-    padding: 10,
+    backgroundColor: '#e8e8e8',
+    borderRadius: 5,
+    padding: 7,
   },
   horizview: {
     flexDirection: 'row',
