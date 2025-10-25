@@ -5,7 +5,8 @@ import React, { useState, useRef } from 'react';
 import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
 
 export default function Index() {
-  const [stateImages, setStateImages] = useState<string[]>([]);
+  type ImgItem = { uri: string; name: string };
+  const [stateImages, setStateImages] = useState<ImgItem[]>([]);
   const [index, setIndex]=useState(0);
   const newcontext = useImageManipulator(stateImages[index]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -21,8 +22,15 @@ export default function Index() {
     });
     console.log(result);
     if (!result.canceled) { 
-      const selectedImageUris = result.assets.map((asset) => asset.uri);
-      setStateImages(selectedImageUris);
+      const items: ImgItem[] = result.assets.map((asset) => {
+        const uri = asset.uri;
+        // Try to derive a readable name from fileName if available; else from URI path
+        const derived = (asset as any).fileName
+          ? (asset as any).fileName
+          : uri.split('?')[0].split('#')[0].split('/').pop() || 'image.jpg';
+        return { uri, name: derived };
+      });
+      setStateImages(items);
     }
   };
 
@@ -91,14 +99,24 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
+      <FlatList
+        horizontal
+        data={stateImages}
+        keyExtractor={(item, i) => `${item.uri}-${i}`}
+        contentContainerStyle={styles.thumbnailList}
+        renderItem={({ item }) => (
+          <View style={styles.thumbItem}>
+            <Image source={{ uri: item.uri }} style={styles.thumbnail} />
+            <Text style={styles.thumbName} numberOfLines={1}>{item.name}</Text>
+          </View>
+        )}
+      />
       <View style={styles.horizview}>
-        <TouchableOpacity style={styles.button1} onPress={pickImage}><Text style={{color: 'black'}}>Upload Images</Text></TouchableOpacity>
-      </View>
-      <FlatList scrollEnabled horizontal data={stateImages} renderItem={({item}) => <Image source={{ uri: item }} style={styles.image} />}></FlatList>
-      <View style={styles.horizview}>
-        <TouchableOpacity style={styles.button1} onPress={rotateAll}><Text style={{color: 'black'}}>Rotate All</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={pickImage}><Text style={{color: 'black'}}>Upload</Text></TouchableOpacity>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(true)}><Text style={{color:'black'}}>Resize All</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={rotateAll}><Text style={{color: 'black'}}>Rotate</Text></TouchableOpacity>
+        <Text>  </Text>
+        <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(true)}><Text style={{color:'black'}}>Resize</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
@@ -116,7 +134,7 @@ export default function Index() {
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={downloadAll}><Text style={{color:'black'}}>Save All</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={downloadAll}><Text style={{color:'black'}}>Save</Text></TouchableOpacity>
       </View>
     </View>
   );
@@ -137,10 +155,31 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     margin: 2,
   },
+  thumbnailList: {
+    paddingHorizontal: 6,
+  },
+  thumbItem: {
+    width: 110,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  thumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    backgroundColor: '#dcdcdc',
+  },
+  thumbName: {
+    marginTop: 4,
+    maxWidth: 100,
+    fontSize: 12,
+    color: '#333',
+  },
   button1: {
     backgroundColor: '#e8e8e8',
     borderRadius: 5,
     padding: 7,
+    borderWidth: 1,
   },
   horizview: {
     flexDirection: 'row',
