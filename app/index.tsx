@@ -46,11 +46,11 @@ export default function Index() {
 
   //ROTATING ALL IMAGES
   const rotateAll = async () => {
-    const rotatedImages = await Promise.all(
+    const rotatedImages: ImgItem[] = await Promise.all(
       stateImages.map(async (item) => {
-        const {manipulateAsync} = require ('expo-image-manipulator');
-        const result = await manipulateAsync(item, [{rotate: 90}], { format: SaveFormat.JPEG});
-        return result.uri;
+        const { manipulateAsync } = require('expo-image-manipulator');
+        const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { format: SaveFormat.JPEG });
+        return { uri: result.uri, name: item.name };
       })
     );
     setStateImages(rotatedImages);
@@ -58,36 +58,27 @@ export default function Index() {
 
   //RESIZING ALL IMAGES
   const resizeAll = async (h: number, w: number) => {
-    const resizedImages = await Promise.all(
+    const resizedImages: ImgItem[] = await Promise.all(
       stateImages.map(async (item) => {
-        const {manipulateAsync} = require ('expo-image-manipulator');
-        
-        if (h>0 && w==0) {
-          const result = await manipulateAsync(item, [{
-            resize: {
-              height: h,
-            }
-          }], {format: SaveFormat.JPEG});
-          return result.uri;
-        } else if (h==0 && w>0) {
-          const result = await manipulateAsync(item, [{
-            resize: {
-              width: w,
-            }
-          }], {format: SaveFormat.JPEG});
-          return result.uri;
+        const { manipulateAsync } = require('expo-image-manipulator');
+
+        if (h > 0 && w === 0) {
+          const result = await manipulateAsync(item.uri, [{ resize: { height: h } }], { format: SaveFormat.JPEG });
+          return { uri: result.uri, name: item.name };
+        } else if (h === 0 && w > 0) {
+          const result = await manipulateAsync(item.uri, [{ resize: { width: w } }], { format: SaveFormat.JPEG });
+          return { uri: result.uri, name: item.name };
         } else if (h > 0 && w > 0) {
-          const result = await manipulateAsync(item, [{
-            resize: {
-              width: w,
-              height: h,
-            }
-          }], {format: SaveFormat.JPEG});
-          return result.uri;
+          const result = await manipulateAsync(item.uri, [{ resize: { width: w, height: h } }], { format: SaveFormat.JPEG });
+          return { uri: result.uri, name: item.name };
         }
-        setResizeHeight(0);
-        setResizeWidth(0);
-      }));
+        // If both are 0 or invalid, keep original
+        return item;
+      })
+    );
+    // reset inputs after operation
+    setResizeHeight(0);
+    setResizeWidth(0);
     setStateImages(resizedImages);
   };
 
@@ -98,16 +89,18 @@ export default function Index() {
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
+    <View style={styles.container}> 
+      <FlatList                               // this list shows uploaded images
+        style={styles.thumbnailRow}
         horizontal
+        showsHorizontalScrollIndicator={true}
         data={stateImages}
         keyExtractor={(item, i) => `${item.uri}-${i}`}
         contentContainerStyle={styles.thumbnailList}
         renderItem={({ item }) => (
           <View style={styles.thumbItem}>
             <Image source={{ uri: item.uri }} style={styles.thumbnail} />
-            <Text style={styles.thumbName} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.thumbName}>{item.name}</Text>
           </View>
         )}
       />
@@ -143,12 +136,17 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ededed',
+    backgroundColor: '#e7e7e7ff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     color: '#1c1c1c'
+  },
+  thumbnailRow: {
+    height: 240,
+    width: '100%',
+    marginTop: 16,
   },
   image: {
     width: 200,
@@ -159,21 +157,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   thumbItem: {
-    width: 110,
+    width: 210,
     alignItems: 'center',
     marginHorizontal: 4,
   },
   thumbnail: {
-    width: 100,
-    height: 100,
+    width: 200,
+    height: 200,
     borderRadius: 10,
     backgroundColor: '#dcdcdc',
   },
   thumbName: {
     marginTop: 4,
-    maxWidth: 100,
+    maxWidth: 200,
     fontSize: 12,
     color: '#333',
+    textAlign: 'center',
   },
   button1: {
     backgroundColor: '#e8e8e8',
