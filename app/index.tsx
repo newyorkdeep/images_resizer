@@ -5,11 +5,10 @@ import React, { useState, useRef } from 'react';
 import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
 
 export default function Index() {
-  type ImgItem = { uri: string; name: string };
+  type ImgItem = { uri: string; name: string; width: number; height: number };
   const [stateImages, setStateImages] = useState<ImgItem[]>([]);
-  const [index, setIndex]=useState(0);
-  const newcontext = useImageManipulator(stateImages[index]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [modal2Visible, setModal2Visible] = useState(false);
   const [resizeHeight, setResizeHeight] = useState(0);
   const [resizeWidth, setResizeWidth] = useState(0);
 
@@ -28,7 +27,7 @@ export default function Index() {
         const derived = (asset as any).fileName
           ? (asset as any).fileName
           : uri.split('?')[0].split('#')[0].split('/').pop() || 'image.jpg';
-        return { uri, name: derived };
+        return { uri, name: derived, width: asset.width, height: asset.height };
       });
       setStateImages(items);
     }
@@ -46,11 +45,11 @@ export default function Index() {
 
   //ROTATING ALL IMAGES
   const rotateAll = async () => {
-    const rotatedImages: ImgItem[] = await Promise.all(
+    const rotatedImages = await Promise.all(
       stateImages.map(async (item) => {
-        const { manipulateAsync } = require('expo-image-manipulator');
-        const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { format: SaveFormat.JPEG });
-        return { uri: result.uri, name: item.name };
+        const {manipulateAsync} = require ('expo-image-manipulator');
+        const result = await manipulateAsync(item.uri, [{rotate: 90}], { format: SaveFormat.JPEG});
+        return { uri: result.uri, name: item.name, width: result.width, height: result.height };
       })
     );
     setStateImages(rotatedImages);
@@ -58,49 +57,73 @@ export default function Index() {
 
   //RESIZING ALL IMAGES
   const resizeAll = async (h: number, w: number) => {
-    const resizedImages: ImgItem[] = await Promise.all(
+    const resizedImages = await Promise.all(
       stateImages.map(async (item) => {
-        const { manipulateAsync } = require('expo-image-manipulator');
-
-        if (h > 0 && w === 0) {
-          const result = await manipulateAsync(item.uri, [{ resize: { height: h } }], { format: SaveFormat.JPEG });
-          return { uri: result.uri, name: item.name };
-        } else if (h === 0 && w > 0) {
-          const result = await manipulateAsync(item.uri, [{ resize: { width: w } }], { format: SaveFormat.JPEG });
-          return { uri: result.uri, name: item.name };
+        const {manipulateAsync} = require ('expo-image-manipulator');
+        
+        if (h>0 && w==0) {
+          const result = await manipulateAsync(item.uri, [{
+            resize: {
+              height: h,
+            }
+          }], {format: SaveFormat.JPEG});
+          return { uri: result.uri, name: item.name, width: result.width, height: result.height };
+        } else if (h==0 && w>0) {
+          const result = await manipulateAsync(item.uri, [{
+            resize: {
+              width: w,
+            }
+          }], {format: SaveFormat.JPEG});
+          return { uri: result.uri, name: item.name, width: result.width, height: result.height };
         } else if (h > 0 && w > 0) {
-          const result = await manipulateAsync(item.uri, [{ resize: { width: w, height: h } }], { format: SaveFormat.JPEG });
-          return { uri: result.uri, name: item.name };
+          const result = await manipulateAsync(item.uri, [{
+            resize: {
+              width: w,
+              height: h,
+            }
+          }], {format: SaveFormat.JPEG});
+          return { uri: result.uri, name: item.name, width: result.width, height: result.height };
+        } else {
+          setResizeHeight(0);
+          setResizeWidth(0);
+          return item;
         }
-        // If both are 0 or invalid, keep original
-        return item;
-      })
-    );
-    // reset inputs after operation
-    setResizeHeight(0);
-    setResizeWidth(0);
+      }));
     setStateImages(resizedImages);
   };
 
   const downloadAll = async () => {
     for (let i=0; i<stateImages.length;i++) {
-      downloadImage(stateImages[i]);
+      downloadImage(stateImages[i].uri);
     }
   }
 
+  const convertAll = async () => {
+    {}
+  }
+
   return (
-    <View style={styles.container}> 
-      <FlatList                               // this list shows uploaded images
-        style={styles.thumbnailRow}
+    <View style={styles.container}>
+      <FlatList style={styles.flatList}                               //this is a flatlist that holds opened images!!!
+        scrollEnabled
         horizontal
-        showsHorizontalScrollIndicator={true}
         data={stateImages}
         keyExtractor={(item, i) => `${item.uri}-${i}`}
         contentContainerStyle={styles.thumbnailList}
         renderItem={({ item }) => (
           <View style={styles.thumbItem}>
             <Image source={{ uri: item.uri }} style={styles.thumbnail} />
-            <Text style={styles.thumbName}>{item.name}</Text>
+            <Text style={styles.thumbName}>
+              {item.name.length <= 100
+                ? item.name
+                : (() => {
+                    const extIdx = item.name.lastIndexOf('.');
+                    const ext = extIdx !== -1 ? item.name.substring(extIdx) : '';
+                    const truncated = item.name.substring(0, 100 - ext.length - 3);
+                    return truncated + '...' + ext;
+                  })()}
+            </Text>
+            <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
           </View>
         )}
       />
@@ -113,17 +136,29 @@ export default function Index() {
         <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
-            <Text>New Height:</Text>
-            <TextInput style={styles.textinput} onChangeText={(value) => {
-              setResizeHeight(Number(value));
-            }}></TextInput> <p></p>
             <Text>New Width:</Text>
             <TextInput style={styles.textinput} onChangeText={(value) => {
               setResizeWidth(Number(value));
             }}></TextInput> <p></p>
+            <Text>New Height:</Text>
+            <TextInput style={styles.textinput} onChangeText={(value) => {
+              setResizeHeight(Number(value));
+            }}></TextInput> <p></p>
             <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
             <Text> </Text>
             <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
+          </View>
+        </Modal>
+        <Text>  </Text>
+        <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(true)}><Text style={{color:'black'}}>Convert</Text></TouchableOpacity>
+        <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
+          <View style={styles.modall}>
+            <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
+            <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to JPG</Text></TouchableOpacity>
+            <Text> </Text>
+            <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to PNG</Text></TouchableOpacity>
+            <Text> </Text>
+            <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
           </View>
         </Modal>
         <Text>  </Text>
@@ -142,11 +177,6 @@ const styles = StyleSheet.create({
   },
   text: {
     color: '#1c1c1c'
-  },
-  thumbnailRow: {
-    height: 240,
-    width: '100%',
-    marginTop: 16,
   },
   image: {
     width: 200,
@@ -169,10 +199,16 @@ const styles = StyleSheet.create({
   },
   thumbName: {
     marginTop: 4,
-    maxWidth: 200,
+    maxWidth: 100,
     fontSize: 12,
     color: '#333',
+    flexWrap: 'wrap',
     textAlign: 'center',
+  },
+  thumbRes: {
+    fontSize: 10,
+    color: '#555',
+    marginTop: 2,
   },
   button1: {
     backgroundColor: '#e8e8e8',
@@ -193,5 +229,9 @@ const styles = StyleSheet.create({
   },
   textinput: {
     paddingVertical: 19,
+  },
+  flatList: {
+    width: '100%',
+    marginTop: 16,
   }
 })
