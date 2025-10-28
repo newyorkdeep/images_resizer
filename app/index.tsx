@@ -3,6 +3,7 @@ import { ImageManipulator, SaveFormat, useImageManipulator } from 'expo-image-ma
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef } from 'react';
 import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
+import Slider from '@react-native-community/slider';
 
 export default function Index() {
   type ImgItem = { uri: string; name: string; width: number; height: number };
@@ -13,6 +14,7 @@ export default function Index() {
   const [resizeHeight, setResizeHeight] = useState(0);
   const [resizeWidth, setResizeWidth] = useState(0);
   const [nameTag, setNameTag] = useState('');
+  const [jpgQuality, setJpgQuality] = useState(1);
 
   //UPLOADING IMAGES TO PROGRAM
   const pickImage = async () => {
@@ -218,9 +220,14 @@ export default function Index() {
             <TextInput style={styles.textinput} onChangeText={(value) => {
               setResizeHeight(Number(value));
             }}></TextInput> <p></p>
+            <Text>Quality: *</Text>
+            <TextInput style={styles.textinput} onChangeText={(value) => {
+              setJpgQuality(Number(value));
+            }}></TextInput> <p></p>
             <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
             <Text> </Text>
             <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
+            <Text>* 1 is the best quality, 0 is the lowest.</Text>
           </View>
         </Modal>
         <Text>  </Text>
