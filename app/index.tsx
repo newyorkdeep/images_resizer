@@ -3,6 +3,7 @@ import { ImageManipulator, SaveFormat, useImageManipulator } from 'expo-image-ma
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef } from 'react';
 import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
+import { File, Directory, Paths } from 'expo-file-system';
 
 export default function Index() {
   type ImgItem = { uri: string; name: string; width: number; height: number; weight: number};
