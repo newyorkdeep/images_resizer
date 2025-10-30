@@ -3,10 +3,9 @@ import { ImageManipulator, SaveFormat, useImageManipulator } from 'expo-image-ma
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef } from 'react';
 import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
-import Slider from '@react-native-community/slider';
 
 export default function Index() {
-  type ImgItem = { uri: string; name: string; width: number; height: number };
+  type ImgItem = { uri: string; name: string; width: number; height: number; weight: number};
   const [stateImages, setStateImages] = useState<ImgItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modal2Visible, setModal2Visible] = useState(false);
@@ -14,7 +13,7 @@ export default function Index() {
   const [resizeHeight, setResizeHeight] = useState(0);
   const [resizeWidth, setResizeWidth] = useState(0);
   const [nameTag, setNameTag] = useState('');
-  const [jpgQuality, setJpgQuality] = useState(1);
+  const [compression, setCompression] = useState(1);
 
   //UPLOADING IMAGES TO PROGRAM
   const pickImage = async () => {
@@ -31,7 +30,7 @@ export default function Index() {
         const derived = (asset as any).fileName
           ? (asset as any).fileName
           : uri.split('?')[0].split('#')[0].split('/').pop() || 'image.jpg';
-        return { uri, name: derived, width: asset.width, height: asset.height };
+        return { uri, name: derived, width: asset.width, height: asset.height, weight: (asset.fileSize) || 0};
       });
       setStateImages(items);
     }
@@ -57,7 +56,9 @@ export default function Index() {
       stateImages.map(async (item) => {
         const {manipulateAsync} = require ('expo-image-manipulator');
         const result = await manipulateAsync(item.uri, [{rotate: 90}], { format: SaveFormat.JPEG});
-        return { uri: result.uri, name: item.name, width: result.width, height: result.height };
+        const fileInfo = await FileSystem.getInfoAsync(result.uri);
+        const weight = fileInfo.size;
+        return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: weight};
       })
     );
     setStateImages(rotatedImages);
@@ -106,7 +107,7 @@ export default function Index() {
         const result = await manipulateAsync(item.uri, [], {
           format,
           // compression applies to JPEG/WEBP; PNG ignores it but it's harmless
-          compress: a === 1 ? 1 : undefined,
+          compress: a === 1 ? compression : undefined,
         });
 
         return {
@@ -114,6 +115,7 @@ export default function Index() {
           name: toExt(item.name, newExt),
           width: result.width ?? item.width,
           height: result.height ?? item.height,
+          weight: result.weight,
         };
       })
     );
@@ -145,23 +147,23 @@ export default function Index() {
           const result = await manipulateAsync(
             item.uri,
             [{ resize: { height: h } }],
-            { format: desiredFormat }
+            { format: desiredFormat, compress: !isPng ? compression : undefined }
           );
-          return { uri: result.uri, name: newName, width: result.width, height: result.height };
+          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: result.weight };
         } else if (h == 0 && w > 0) {
           const result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w } }],
-            { format: desiredFormat }
+            { format: desiredFormat, compress: !isPng ? compression : undefined }
           );
-          return { uri: result.uri, name: newName, width: result.width, height: result.height };
+          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: result.weight };
         } else if (h > 0 && w > 0) {
           const result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w, height: h } }],
-            { format: desiredFormat }
+            { format: desiredFormat, compress: !isPng ? compression : undefined }
           );
-          return { uri: result.uri, name: newName, width: result.width, height: result.height };
+          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: result.weight };
         } else {
           setResizeHeight(0);
           setResizeWidth(0);
@@ -200,6 +202,7 @@ export default function Index() {
                   })()}
             </Text>
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
+            <Text style={styles.thumbRes}>{(item.weight/1024).toFixed(2)} KB</Text>
           </View>
         )}
       />
@@ -220,10 +223,11 @@ export default function Index() {
             <TextInput style={styles.textinput} onChangeText={(value) => {
               setResizeHeight(Number(value));
             }}></TextInput> <p></p>
-            <Text>Quality: *</Text>
+            <Text>JPEG Compression</Text>
             <TextInput style={styles.textinput} onChangeText={(value) => {
-              setJpgQuality(Number(value));
+              setCompression(Number(value)*0.01);
             }}></TextInput> <p></p>
+            <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
             <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
             <Text> </Text>
             <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
@@ -235,11 +239,16 @@ export default function Index() {
         <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
+            <Text>JPEG Compression</Text>
+            <TextInput style={styles.textinput} onChangeText={(value) => {
+              setCompression(Number(value)*0.01);
+            }}></TextInput> <p></p>
+            <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
             <TouchableOpacity style={styles.button1} onPress={() => {convertAll(1); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to JPG</Text></TouchableOpacity>
             <Text> </Text>
             <TouchableOpacity style={styles.button1} onPress={() => {convertAll(2); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to PNG</Text></TouchableOpacity>
             <Text> </Text>
-            <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>                  
           </View>
         </Modal>
         <Text>  </Text>
@@ -327,5 +336,18 @@ const styles = StyleSheet.create({
   flatList: {
     width: '100%',
     marginTop: 16,
+  },
+  slider: {
+    flex: 1,
+    height: 40,
+    marginHorizontal: 10,
+  },
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sliderLabel: {
+    width: 40,
+    textAlign: 'center',
   }
 })
