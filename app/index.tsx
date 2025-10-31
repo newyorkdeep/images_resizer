@@ -3,7 +3,7 @@ import { ImageManipulator, SaveFormat, useImageManipulator } from 'expo-image-ma
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef } from 'react';
 import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
-import { File, Directory, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';  // Import FileSystem
 
 export default function Index() {
   type ImgItem = { uri: string; name: string; width: number; height: number; weight: number};
@@ -51,15 +51,18 @@ export default function Index() {
     document.body.removeChild(link); // Remove the link after downloading
   };
 
-  //ROTATING ALL IMAGES
+  // ROTATING ALL IMAGES
   const rotateAll = async () => {
     const rotatedImages = await Promise.all(
       stateImages.map(async (item) => {
-        const {manipulateAsync} = require ('expo-image-manipulator');
-        const result = await manipulateAsync(item.uri, [{rotate: 90}], { format: SaveFormat.JPEG});
-        const fileInfo = await FileSystem.getInfoAsync(result.uri);
-        const weight = fileInfo.size;
-        return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: weight};
+        const { manipulateAsync } = require('expo-image-manipulator');
+        const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { format: SaveFormat.JPEG });
+        const response = await fetch(result.uri);
+        const blob = await response.blob();
+        const fileSizeInBytes = blob.size;
+        const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
+        const fileSizeInMB = (fileSizeInBytes / (1024 * 1024)).toFixed(2);
+        return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: Number(fileSizeInKB)};
       })
     );
     setStateImages(rotatedImages);
@@ -108,19 +111,22 @@ export default function Index() {
         const result = await manipulateAsync(item.uri, [], {
           format,
           // compression applies to JPEG/WEBP; PNG ignores it but it's harmless
-          compress: a === 1 ? compression : undefined,
+          compress: a === 1 ? 1 : undefined,
         });
+        const response = await fetch(result.uri);
+        const blob = await response.blob();
+        const fileSizeInBytes = blob.size;
+        const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
 
         return {
           uri: result.uri,
           name: toExt(item.name, newExt),
           width: result.width ?? item.width,
           height: result.height ?? item.height,
-          weight: result.weight,
+          weight: Number(fileSizeInKB),
         };
       })
     );
-
     setStateImages(convertedImages);
   };
 
@@ -150,21 +156,33 @@ export default function Index() {
             [{ resize: { height: h } }],
             { format: desiredFormat, compress: !isPng ? compression : undefined }
           );
-          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: result.weight };
+          const response = await fetch(result.uri);
+          const blob = await response.blob();
+          const fileSizeInBytes = blob.size;
+          const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
+          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: Number(fileSizeInKB) };
         } else if (h == 0 && w > 0) {
           const result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w } }],
             { format: desiredFormat, compress: !isPng ? compression : undefined }
           );
-          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: result.weight };
+          const response = await fetch(result.uri);
+          const blob = await response.blob();
+          const fileSizeInBytes = blob.size;
+          const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
+          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: Number(fileSizeInKB) };
         } else if (h > 0 && w > 0) {
           const result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w, height: h } }],
             { format: desiredFormat, compress: !isPng ? compression : undefined }
-          );
-          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: result.weight };
+          ); 
+          const response = await fetch(result.uri);
+          const blob = await response.blob();
+          const fileSizeInBytes = blob.size;
+          const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
+          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: Number(fileSizeInKB) };
         } else {
           setResizeHeight(0);
           setResizeWidth(0);
@@ -240,11 +258,6 @@ export default function Index() {
         <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
-            <Text>JPEG Compression</Text>
-            <TextInput style={styles.textinput} onChangeText={(value) => {
-              setCompression(Number(value)*0.01);
-            }}></TextInput> <p></p>
-            <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
             <TouchableOpacity style={styles.button1} onPress={() => {convertAll(1); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to JPG</Text></TouchableOpacity>
             <Text> </Text>
             <TouchableOpacity style={styles.button1} onPress={() => {convertAll(2); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to PNG</Text></TouchableOpacity>
