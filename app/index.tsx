@@ -38,10 +38,6 @@ export default function Index() {
     }
   };
 
-  const calculateWeights = async () => {
-
-  }
-
   //DOWNLOADING IMAGES
   const downloadImage = (imageUri: string, filename: string) => {
     if (typeof document === 'undefined') return;
@@ -56,13 +52,23 @@ export default function Index() {
     document.body.removeChild(link); // Remove the link after downloading
   };
 
+  function base64SizeBytes(base64: string) {
+    // Remove any whitespace/newlines
+    const cleaned = base64.replace(/\s/g, '');
+    // Count padding characters
+    const padding = (cleaned.endsWith('==') ? 2 : (cleaned.endsWith('=') ? 1 : 0));
+    return Math.ceil((cleaned.length * 3) / 4) - padding;
+  }
+
   // ROTATING ALL IMAGES
   const rotateAll = async () => {
     const rotatedImages = await Promise.all(
       stateImages.map(async (item) => {
         const { manipulateAsync } = require('expo-image-manipulator');
-        const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { format: SaveFormat.JPEG });
-        return { uri: result.uri, name: item.name, width: result.width, height: result.height};
+        const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { format: SaveFormat.JPEG, base64: true});
+        if (!result.base64) throw new Error('No base64 returned — make sure base64: true is set.');
+        const sizeBytes = base64SizeBytes(result.base64);
+        return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: sizeBytes};
       })
     );
     setStateImages(rotatedImages);
@@ -118,6 +124,7 @@ export default function Index() {
           name: toExt(item.name, newExt),
           width: result.width ?? item.width,
           height: result.height ?? item.height,
+          weight: 0,
         };
       })
     );
@@ -245,7 +252,7 @@ export default function Index() {
                   })()}
             </Text>
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
-            <Text style={styles.thumbRes}>{item.weight}</Text>
+            <Text style={styles.thumbRes}>{(item.weight/1024/1024).toFixed(2)} MB</Text>
           </View>
         )}
       />
