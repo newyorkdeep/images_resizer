@@ -118,13 +118,16 @@ export default function Index() {
           format,
           // compression applies to JPEG/WEBP; PNG ignores it but it's harmless
           compress: a === 1 ? 1 : undefined,
+          base64: true,
         });
+        if (!result.base64) throw new Error('No base64 returned — make sure base64: true is set.');
+        const sizeBytes = base64SizeBytes(result.base64);
         return {
           uri: result.uri,
           name: toExt(item.name, newExt),
           width: result.width ?? item.width,
           height: result.height ?? item.height,
-          weight: 0,
+          weight: sizeBytes,
         };
       })
     );
