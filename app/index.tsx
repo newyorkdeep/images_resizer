@@ -4,9 +4,10 @@ import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef } from 'react';
 import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
 import * as FileSystem from 'expo-file-system';  // Import FileSystem
+import { Platform } from 'react-native';
 
 export default function Index() {
-  type ImgItem = { uri: string; name: string; width: number; height: number; weight: number};
+  type ImgItem = { uri: string; name: string; width: number; height: number; weight: number;};
   const [stateImages, setStateImages] = useState<ImgItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modal2Visible, setModal2Visible] = useState(false);
@@ -37,6 +38,10 @@ export default function Index() {
     }
   };
 
+  const calculateWeights = async () => {
+
+  }
+
   //DOWNLOADING IMAGES
   const downloadImage = (imageUri: string, filename: string) => {
     if (typeof document === 'undefined') return;
@@ -57,12 +62,7 @@ export default function Index() {
       stateImages.map(async (item) => {
         const { manipulateAsync } = require('expo-image-manipulator');
         const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { format: SaveFormat.JPEG });
-        const response = await fetch(result.uri);
-        const blob = await response.blob();
-        const fileSizeInBytes = blob.size;
-        const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
-        const fileSizeInMB = (fileSizeInBytes / (1024 * 1024)).toFixed(2);
-        return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: Number(fileSizeInKB)};
+        return { uri: result.uri, name: item.name, width: result.width, height: result.height};
       })
     );
     setStateImages(rotatedImages);
@@ -113,17 +113,11 @@ export default function Index() {
           // compression applies to JPEG/WEBP; PNG ignores it but it's harmless
           compress: a === 1 ? 1 : undefined,
         });
-        const response = await fetch(result.uri);
-        const blob = await response.blob();
-        const fileSizeInBytes = blob.size;
-        const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
-
         return {
           uri: result.uri,
           name: toExt(item.name, newExt),
           width: result.width ?? item.width,
           height: result.height ?? item.height,
-          weight: Number(fileSizeInKB),
         };
       })
     );
@@ -131,9 +125,10 @@ export default function Index() {
   };
 
   //RESIZING ALL IMAGES
-  const resizeAll = async (h: number, w: number) => {
+  const resizeAll = async (h: number, w: number, compression: number) => {
     const resizedImages = await Promise.all(
       stateImages.map(async (item) => {
+        // We require it inside the map async function to ensure scope
         const { manipulateAsync } = require('expo-image-manipulator');
 
         // Preserve PNG if the original is PNG; otherwise use JPEG
@@ -150,48 +145,77 @@ export default function Index() {
         };
         const newName = withExt(item.name, isPng ? '.png' : '.jpg');
 
+        let result;
+
         if (h > 0 && w == 0) {
-          const result = await manipulateAsync(
+          result = await manipulateAsync(
             item.uri,
             [{ resize: { height: h } }],
-            { format: desiredFormat, compress: !isPng ? compression : undefined }
+            { format: desiredFormat, compress: !isPng ? compression : compression }
           );
-          const response = await fetch(result.uri);
-          const blob = await response.blob();
-          const fileSizeInBytes = blob.size;
-          const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
-          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: Number(fileSizeInKB) };
         } else if (h == 0 && w > 0) {
-          const result = await manipulateAsync(
+          result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w } }],
-            { format: desiredFormat, compress: !isPng ? compression : undefined }
+            { format: desiredFormat, compress: !isPng ? compression : compression }
           );
-          const response = await fetch(result.uri);
-          const blob = await response.blob();
-          const fileSizeInBytes = blob.size;
-          const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
-          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: Number(fileSizeInKB) };
         } else if (h > 0 && w > 0) {
-          const result = await manipulateAsync(
+          result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w, height: h } }],
-            { format: desiredFormat, compress: !isPng ? compression : undefined }
+            { format: desiredFormat, compress: !isPng ? compression : compression }
           ); 
-          const response = await fetch(result.uri);
-          const blob = await response.blob();
-          const fileSizeInBytes = blob.size;
-          const fileSizeInKB = (fileSizeInBytes / 1024).toFixed(2);
-          return { uri: result.uri, name: newName, width: result.width, height: result.height, weight: Number(fileSizeInKB) };
+        } else if (h == 0  && w == 0) {
+          // Even with 0,0 resize parameters, we still use manipulateAsync to apply the compression/format change
+          result = await manipulateAsync(
+            item.uri,
+            [], // Empty actions array
+            { format: desiredFormat, compress: !isPng ? compression : compression }
+          );
         } else {
+          // If logic somehow falls through, reset inputs and return original item
           setResizeHeight(0);
           setResizeWidth(0);
-          return item;
+          return item; 
         }
+
+        // *** FIX IS HERE ***
+        // Get the actual file size of the *new* URI
+        const actualSize = await getFileSizeFromUri(result.uri);
+        
+        return { 
+          uri: result.uri, 
+          name: newName, 
+          width: result.width, 
+          height: result.height,
+          weight: actualSize // Include the new size in the state object
+        };
       })
     );
     setStateImages(resizedImages);
   };
+
+  const getFileSizeFromUri = async (uri: string): Promise<number> => {
+    // Check if we are running in a web environment
+    if (Platform.OS === 'web') {
+        try {
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            return blob.size; // Size in bytes
+        } catch (error) {
+            console.error("Error getting file size on web:", error);
+            return 0;
+        }
+    } else {
+        // Fallback for native (iOS/Android) using FileSystem
+        try {
+            const fileInfo = await FileSystem.getInfoAsync(uri, { size: true });
+            return fileInfo.exists ? fileInfo.size : 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+};
 
   const downloadAll = async () => {
     for (let i=0; i<stateImages.length;i++) {
@@ -221,7 +245,7 @@ export default function Index() {
                   })()}
             </Text>
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
-            <Text style={styles.thumbRes}>{(item.weight/1024).toFixed(2)} KB</Text>
+            <Text style={styles.thumbRes}>{item.weight}</Text>
           </View>
         )}
       />
@@ -247,10 +271,10 @@ export default function Index() {
               setCompression(Number(value)*0.01);
             }}></TextInput> <p></p>
             <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
-            <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth, compression); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
             <Text> </Text>
             <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close Modal</Text></TouchableOpacity>
-            <Text>* 1 is the best quality, 0 is the lowest.</Text>
+            <Text>* 100% is the best quality, 0% is the lowest.</Text>
           </View>
         </Modal>
         <Text>  </Text>
