@@ -260,11 +260,11 @@ export default function Index() {
         )}
       />
       <View style={styles.horizview}>
-        <TouchableOpacity style={styles.button1} onPress={pickImage}><Text style={{color: 'black'}}>Upload</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={pickImage}><Text style={styles.textinside}>Upload</Text></TouchableOpacity>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={rotateAll}><Text style={{color: 'black'}}>Rotate</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={rotateAll}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(true)}><Text style={{color:'black'}}>Resize</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(true)}><Text style={styles.textinside}>Resize</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
@@ -288,7 +288,7 @@ export default function Index() {
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(true)}><Text style={{color:'black'}}>Convert</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(true)}><Text style={styles.textinside}>Convert</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
@@ -300,7 +300,7 @@ export default function Index() {
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModal3Visible(true)}><Text style={{color:'black'}}>Rename</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={() => setModal3Visible(true)}><Text style={styles.textinside}>Rename</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modal3Visible} onRequestClose={() => {setModal3Visible(!modal2Visible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Renaming Options</Text> <p></p>
@@ -313,7 +313,7 @@ export default function Index() {
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={downloadAll}><Text style={{color:'black'}}>Save</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button1} onPress={downloadAll}><Text style={styles.textinside}>Save</Text></TouchableOpacity>
       </View>
     </View>
   );
@@ -323,11 +323,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#e7e7e7ff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start',  //decides where is the line of content is gonn be, on the top or bottom
+    flexDirection: 'column',
+  },
+  textinside: {
+    fontSize: 12,
+    alignSelf: 'center',
   },
   text: {
-    color: '#1c1c1c'
+    color: '#1c1c1c',
   },
   image: {
     width: 200,
@@ -365,10 +369,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8e8e8',
     borderRadius: 5,
     padding: 7,
-    borderWidth: 1,
+    paddingVertical: 16,
+    //borderWidth: 1,
   },
   horizview: {
     flexDirection: 'row',
+    alignSelf: 'center',
     marginBottom: 5,
     marginTop: 5,
   },
@@ -383,7 +389,7 @@ const styles = StyleSheet.create({
   },
   flatList: {
     width: '100%',
-    marginTop: 16,
+    marginTop: 16, 
   },
   slider: {
     flex: 1,
