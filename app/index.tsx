@@ -16,6 +16,12 @@ export default function Index() {
   const [resizeWidth, setResizeWidth] = useState(0);
   const [nameTag, setNameTag] = useState('');
   const [compression, setCompression] = useState(1);
+  // which image uri is being edited right now?
+  const [editingUri, setEditingUri] = useState<string | null>(null);
+  // draft of the new filename
+  const [draftName, setDraftName] = useState<string>('');
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   //UPLOADING IMAGES TO PROGRAM
   const pickImage = async () => {
@@ -34,7 +40,11 @@ export default function Index() {
           : uri.split('?')[0].split('#')[0].split('/').pop() || 'image.jpg';
         return { uri, name: derived, width: asset.width, height: asset.height, weight: (asset.fileSize) || 0};
       });
-      setStateImages(items);
+      setStateImages(prev => {
+        const existing = new Set(prev.map(i => i.uri));
+        const filtered = items.filter(i => !existing.has(i.uri));
+        return [...prev, ...filtered]; // append new unique items
+      });
     }
   };
 
@@ -60,7 +70,7 @@ export default function Index() {
     return Math.ceil((cleaned.length * 3) / 4) - padding;
   }
 
-  // ROTATING ALL IMAGES
+  // ROTATING ALL IMAGES (unused feature)
   const rotateAll = async () => {
     const rotatedImages = await Promise.all(
       stateImages.map(async (item) => {
@@ -73,6 +83,33 @@ export default function Index() {
     );
     setStateImages(rotatedImages);
   };
+
+  const deleteOne = (cursorUri: string) => {
+    setStateImages(prev =>
+      prev.filter(item => item.uri !== cursorUri)
+    );
+  };
+
+  const rotateOne = async (cursorUri: string) => {
+    const { manipulateAsync } = require('expo-image-manipulator');
+    const rotatedImages = await Promise.all(
+      stateImages.map(async (item) => {
+        if (item.uri === cursorUri) {
+          const result = await manipulateAsync(item.uri, [{ rotate: 90 }], {
+            format: SaveFormat.JPEG,
+            base64: true,
+          });
+          if (!result.base64) throw new Error('No base64 returned — make sure base64: true is set.');
+          const sizeBytes = base64SizeBytes(result.base64);
+          return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: sizeBytes };
+        }
+        // return unchanged item for all other images
+        return item;
+      })
+    );
+    setStateImages(rotatedImages);
+  };
+    
 
   const renameAll = (a: string) => {
     // Use trimmed base or default to 'image'
@@ -233,6 +270,34 @@ export default function Index() {
     }
   };
 
+  const commitRename = () => {
+    if (!editingUri) return;
+    setStateImages(imgs =>
+      imgs.map(img =>
+        img.uri === editingUri
+          ? { ...img, name: draftName.trim() || img.name }
+          : img
+      )
+    );
+    setEditingUri(null);
+    setDraftName('');
+  };
+
+  const openPreview = (uri: string) => {
+    setPreviewUri(uri);
+    setPreviewModalVisible(true);
+    console.log(previewUri);
+  };
+
+  const closePreview = () => {
+    setPreviewModalVisible(false);
+    setPreviewUri(null);
+  };
+
+  const reload = async () => {
+    setStateImages([]);
+  };
+
   return (
     <View style={styles.container}>
       <FlatList style={styles.flatList}                               //this is a flatlist that holds opened images!!!
@@ -243,28 +308,55 @@ export default function Index() {
         contentContainerStyle={styles.thumbnailList}
         renderItem={({ item }) => (
           <View style={styles.thumbItem}>
-            <Image source={{ uri: item.uri }} style={styles.thumbnail} />
-            <Text style={styles.thumbName}>
-              {item.name.length <= 100
-                ? item.name
-                : (() => {
-                    const extIdx = item.name.lastIndexOf('.');
-                    const ext = extIdx !== -1 ? item.name.substring(extIdx) : '';
-                    const truncated = item.name.substring(0, 100 - ext.length - 3);
-                    return truncated + '...' + ext;
-                  })()}
-            </Text>
+            <Pressable onPress={()=>openPreview(item.uri)}>
+              <Image source={{ uri: item.uri }} style={styles.thumbnail}/>
+            </Pressable>
+            {editingUri === item.uri ? (
+              <TextInput
+              style={styles.thumbName}
+              value={draftName}
+              onChangeText={setDraftName}
+              autoFocus
+              onSubmitEditing={commitRename}
+              onBlur={commitRename}
+              returnKeyType="done"
+              />
+            ):(
+              <Text style={styles.thumbName} onPress={()=> {
+                setEditingUri(item.uri);
+                setDraftName(item.name);
+              }}>
+                {item.name.length <= 100
+                  ? item.name
+                  : (() => {
+                      const extIdx = item.name.lastIndexOf('.');
+                      const ext = extIdx !== -1 ? item.name.substring(extIdx) : '';
+                      const truncated = item.name.substring(0, 100 - ext.length - 3);
+                      return truncated + '...' + ext;
+                    })()}
+              </Text>
+            )}
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
             <Text style={styles.thumbRes}>{(item.weight/1024/1024).toFixed(2)} MB</Text>
+            <Text style={styles.thumbRes} onPress={() => rotateOne(item.uri)}>Rotate</Text>
+            <Text style={styles.thumbRes} onPress={() => deleteOne(item.uri)}>Delete</Text>
           </View>
         )}
       />
-      <View style={styles.horizview}>
-        <TouchableOpacity style={styles.button1} onPress={pickImage}><Text style={styles.textinside}>Upload</Text></TouchableOpacity>
+      <Modal visible={previewModalVisible} animationType='slide' transparent={false}>
+        <View style={styles.modall}>
+          {previewUri && (
+            <Image source={{ uri: previewUri }} style={styles.fullview}/>
+          )}
+          <TouchableOpacity style={styles.button1} onPress={closePreview}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
+        </View>
+      </Modal>
+      <View style={styles.horizview}>                              
+        <TouchableOpacity style={styles.button0} onPress={pickImage}><Text style={styles.textinside}>Upload</Text></TouchableOpacity>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={rotateAll}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button0} onPress={reload}><Text style={styles.textinside}>Reload</Text></TouchableOpacity>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(true)}><Text style={styles.textinside}>Resize</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button0} onPress={() => setModalVisible(true)}><Text style={styles.textinside}>Resize</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
@@ -276,7 +368,7 @@ export default function Index() {
             <TextInput style={styles.textinput} onChangeText={(value) => {
               setResizeHeight(Number(value));
             }}></TextInput> <p></p>
-            <Text>JPEG Compression</Text>
+            <Text>JPEG Compression*</Text>
             <TextInput style={styles.textinput} onChangeText={(value) => {
               setCompression(Number(value)*0.01);
             }}></TextInput> <p></p>
@@ -288,7 +380,7 @@ export default function Index() {
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(true)}><Text style={styles.textinside}>Convert</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button0} onPress={() => setModal2Visible(true)}><Text style={styles.textinside}>Convert</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
@@ -300,7 +392,7 @@ export default function Index() {
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={() => setModal3Visible(true)}><Text style={styles.textinside}>Rename</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button0} onPress={() => setModal3Visible(true)}><Text style={styles.textinside}>Rename</Text></TouchableOpacity>
         <Modal animationType='slide' transparent={false} visible={modal3Visible} onRequestClose={() => {setModal3Visible(!modal2Visible);}}>
           <View style={styles.modall}>
             <Text style={{alignSelf: 'center'}}>Configure Renaming Options</Text> <p></p>
@@ -313,7 +405,7 @@ export default function Index() {
           </View>
         </Modal>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button1} onPress={downloadAll}><Text style={styles.textinside}>Save</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Save</Text></TouchableOpacity>
       </View>
     </View>
   );
@@ -365,11 +457,19 @@ const styles = StyleSheet.create({
     color: '#555',
     marginTop: 2,
   },
+  button0: {
+    backgroundColor: '#e8e8e8',
+    borderRadius: 5,
+    padding: 7,
+    paddingVertical: 16,
+    //borderWidth: 1,
+  },
   button1: {
     backgroundColor: '#e8e8e8',
     borderRadius: 5,
     padding: 7,
     paddingVertical: 16,
+    width: 600,
     //borderWidth: 1,
   },
   horizview: {
@@ -379,13 +479,14 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   modall: {
-    marginTop: 90,
-    height: 900,
-    width: 600,
-    alignSelf: 'center',
+    flex: 1, 
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textinput: {
     paddingVertical: 19,
+    width: 600,
   },
   flatList: {
     width: '100%',
@@ -403,5 +504,12 @@ const styles = StyleSheet.create({
   sliderLabel: {
     width: 40,
     textAlign: 'center',
+  },
+  fullview: {
+    height:'85%',
+    width: '85%',
+    resizeMode: 'contain',
+    alignSelf: 'center',
+    marginBottom: 20,
   }
 })
