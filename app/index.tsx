@@ -270,6 +270,14 @@ export default function Index() {
     }
   };
 
+  const downloadOne = async (uri: string) => {
+    for (let i=0; i<stateImages.length;i++) {
+      if (uri==stateImages[i].uri) {
+        downloadImage(stateImages[i].uri, stateImages[i].name);
+      }
+    }
+  };
+
   const commitRename = () => {
     if (!editingUri) return;
     setStateImages(imgs =>
@@ -348,7 +356,13 @@ export default function Index() {
           {previewUri && (
             <Image source={{ uri: previewUri }} style={styles.fullview}/>
           )}
-          <TouchableOpacity style={styles.button1} onPress={closePreview}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
+          <View>
+            <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Download</Text></TouchableOpacity>
+            <Text> </Text>
+            <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
+            <Text> </Text>
+            <TouchableOpacity style={styles.button0} onPress={closePreview}><Text style={styles.textinside}>Close</Text></TouchableOpacity>
+          </View>
         </View>
       </Modal>
       <View style={styles.horizview}>                              
