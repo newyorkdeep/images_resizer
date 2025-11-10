@@ -90,8 +90,9 @@ export default function Index() {
     );
   };
 
-  const rotateOne = async (cursorUri: string) => {
+  const rotateOne = async (cursorUri: string | null) => {
     const { manipulateAsync } = require('expo-image-manipulator');
+    let finalUri = "";
     const rotatedImages = await Promise.all(
       stateImages.map(async (item) => {
         if (item.uri === cursorUri) {
@@ -101,6 +102,7 @@ export default function Index() {
           });
           if (!result.base64) throw new Error('No base64 returned — make sure base64: true is set.');
           const sizeBytes = base64SizeBytes(result.base64);
+          finalUri=result.uri;
           return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: sizeBytes };
         }
         // return unchanged item for all other images
@@ -108,6 +110,7 @@ export default function Index() {
       })
     );
     setStateImages(rotatedImages);
+    setPreviewUri(finalUri);
   };
     
 
@@ -270,7 +273,7 @@ export default function Index() {
     }
   };
 
-  const downloadOne = async (uri: string) => {
+  const downloadOne = async (uri: string | null) => {
     for (let i=0; i<stateImages.length;i++) {
       if (uri==stateImages[i].uri) {
         downloadImage(stateImages[i].uri, stateImages[i].name);
@@ -345,8 +348,7 @@ export default function Index() {
               </Text>
             )}
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
-            <Text style={styles.thumbRes}>{(item.weight/1024/1024).toFixed(2)} MB</Text>
-            <Text style={styles.thumbRes} onPress={() => rotateOne(item.uri)}>Rotate</Text>
+            <Text style={styles.thumbRes}>{(item.weight/1024).toFixed(2)} KB</Text>
             <Text style={styles.thumbRes} onPress={() => deleteOne(item.uri)}>Delete</Text>
           </View>
         )}
@@ -356,12 +358,12 @@ export default function Index() {
           {previewUri && (
             <Image source={{ uri: previewUri }} style={styles.fullview}/>
           )}
-          <View>
-            <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Download</Text></TouchableOpacity>
+          <View style={styles.horizview}>
+            <TouchableOpacity style={styles.button3} onPress={()=>rotateOne(previewUri)}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
             <Text> </Text>
-            <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.button3} onPress={()=>downloadOne(previewUri)}><Text style={styles.textinside}>Download</Text></TouchableOpacity>
             <Text> </Text>
-            <TouchableOpacity style={styles.button0} onPress={closePreview}><Text style={styles.textinside}>Close</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.button3} onPress={closePreview}><Text style={styles.textinside}>Close</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -473,6 +475,13 @@ const styles = StyleSheet.create({
   },
   button0: {
     backgroundColor: '#e8e8e8',
+    borderRadius: 5,
+    padding: 7,
+    paddingVertical: 16,
+    //borderWidth: 1,
+  },
+  button3: {
+    backgroundColor: 'white',
     borderRadius: 5,
     padding: 7,
     paddingVertical: 16,
