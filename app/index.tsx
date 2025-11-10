@@ -483,8 +483,7 @@ const styles = StyleSheet.create({
   button3: {
     backgroundColor: 'white',
     borderRadius: 5,
-    padding: 7,
-    paddingVertical: 16,
+    padding: 3,
     //borderWidth: 1,
   },
   button1: {
@@ -529,10 +528,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fullview: {
-    height:'85%',
-    width: '85%',
+    height:'90%',
+    width: '90%',
     resizeMode: 'contain',
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   }
 })
