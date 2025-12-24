@@ -23,6 +23,7 @@ export default function Index() {
   const [draftName, setDraftName] = useState<string>('');
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [resizeTargetUri, setResizeTargetUri] = useState<string | null>(null);
 
   //UPLOADING IMAGES TO PROGRAM
   const pickImage = async () => {
@@ -176,8 +177,72 @@ export default function Index() {
   };
 
   const resizeOne = async (h: number, w: number, compression: number, cursorUri: string) => {
-        
-  }
+    const { manipulateAsync } = require('expo-image-manipulator');
+    let updatedPreviewUri: string | null = null;
+    const updatedImages = await Promise.all( stateImages.map(async (item) => { if (item.uri !== cursorUri) { // leave other images unchanged 
+      return item; }   
+    // Preserve PNG if the original is PNG; otherwise use JPEG
+    const isPng =
+      /\.png$/i.test(item.name) ||
+      /\.png(\?|#)/i.test(item.uri);
+    const desiredFormat = isPng ? SaveFormat.PNG : SaveFormat.JPEG;
+    // Update the filename extension to match the output format
+    const withExt = (name: string, ext: '.png' | '.jpg') => {
+      const dot = name.lastIndexOf('.');
+      const base = dot > 0 ? name.slice(0, dot) : name;
+      return `${base}${ext}`;
+    };
+    const newName = withExt(item.name, isPng ? '.png' : '.jpg');
+    let result;
+    if (h > 0 && w === 0) {
+      result = await manipulateAsync(
+        item.uri,
+        [{ resize: { height: h } }],
+        { format: desiredFormat, compress: compression }
+      );
+    } else if (h === 0 && w > 0) {
+      result = await manipulateAsync(
+        item.uri,
+        [{ resize: { width: w } }],
+        { format: desiredFormat, compress: compression }
+      );
+    } else if (h > 0 && w > 0) {
+      result = await manipulateAsync(
+        item.uri,
+        [{ resize: { width: w, height: h } }],
+        { format: desiredFormat, compress: compression }
+      );
+    } else if (h === 0 && w === 0) {
+      // Recompress/reformat without resizing
+      result = await manipulateAsync(
+        item.uri,
+        [],
+        { format: desiredFormat, compress: compression }
+      );
+    } else {
+      // Fallback: reset and keep original item
+      setResizeHeight(0);
+      setResizeWidth(0);
+      return item;
+    }
+    const actualSize = await getFileSizeFromUri(result.uri);
+    const updated = {
+      uri: result.uri,
+      name: newName,
+      width: result.width,
+      height: result.height,
+      weight: actualSize,
+    };
+    // Keep preview in sync if this was being previewed
+    if (previewUri === item.uri) {
+      updatedPreviewUri = result.uri;
+    }
+    return updated;
+  })
+  );
+  setStateImages(updatedImages);
+  if (updatedPreviewUri) { setPreviewUri(updatedPreviewUri); } 
+  };
 
   //RESIZING ALL IMAGES
   const resizeAll = async (h: number, w: number, compression: number) => {
@@ -270,7 +335,7 @@ export default function Index() {
             return 0;
         }
     }
-};
+  };
 
   const downloadAll = async () => {
     for (let i=0; i<stateImages.length;i++) {
@@ -316,6 +381,28 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
+      <Modal animationType='slide' transparent={false} visible={modal4Visible} onRequestClose={() => {setModal4Visible(!modalVisible);}}>
+        <View style={styles.modall}>
+          <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
+          <Text>New Width:</Text>
+          <TextInput style={styles.textinput} onChangeText={(value) => {
+            setResizeWidth(Number(value));
+          }}></TextInput> <p></p>
+          <Text>New Height:</Text>
+          <TextInput style={styles.textinput} onChangeText={(value) => {
+            setResizeHeight(Number(value));
+          }}></TextInput> <p></p>
+          <Text>JPEG Compression*</Text>
+          <TextInput style={styles.textinput} onChangeText={(value) => {
+            setCompression(Number(value)*0.01);
+          }}></TextInput> <p></p>
+          <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
+          <TouchableOpacity style={styles.button1} onPress={() => { if(resizeTargetUri) { resizeOne(resizeHeight, resizeWidth, compression, resizeTargetUri); } setModal4Visible(false); setResizeTargetUri(null);}}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
+          <Text> </Text>
+          <TouchableOpacity style={styles.button1} onPress={() => {setModal4Visible(false); setResizeTargetUri(null);}}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
+          <Text>* 100% is the best quality, 0% is the lowest.</Text>
+        </View>
+      </Modal>
       <FlatList style={styles.flatList}                               //this is a flatlist that holds opened images!!!
         scrollEnabled
         horizontal
@@ -354,29 +441,7 @@ export default function Index() {
             )}
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
             <Text style={styles.thumbRes}>{(item.weight/1024).toFixed(2)} KB</Text>
-            <Text style={styles.thumbRes} onPress={() => setModal4Visible(true)}>Resize</Text>
-            <Modal animationType='slide' transparent={false} visible={modal4Visible} onRequestClose={() => {setModal4Visible(!modalVisible);}}>
-              <View style={styles.modall}>
-                <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
-                <Text>New Width:</Text>
-                <TextInput style={styles.textinput} onChangeText={(value) => {
-                  setResizeWidth(Number(value));
-                }}></TextInput> <p></p>
-                <Text>New Height:</Text>
-                <TextInput style={styles.textinput} onChangeText={(value) => {
-                  setResizeHeight(Number(value));
-                }}></TextInput> <p></p>
-                <Text>JPEG Compression*</Text>
-                <TextInput style={styles.textinput} onChangeText={(value) => {
-                  setCompression(Number(value)*0.01);
-                }}></TextInput> <p></p>
-                <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
-                <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth, compression); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
-                <Text> </Text>
-                <TouchableOpacity style={styles.button1} onPress={() => setModal4Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
-                <Text>* 100% is the best quality, 0% is the lowest.</Text>
-              </View>
-            </Modal>
+            <Text style={styles.thumbRes} onPress={() => {setResizeTargetUri(item.uri); setModal4Visible(true);}}>Resize</Text>
             <Text style={styles.thumbRes} onPress={() => deleteOne(item.uri)}>Delete</Text>
           </View>
         )}
