@@ -1,0 +1,18 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "git fetch on open",
+            "type": "shell",
+            "command": "git fetch",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        }
+    ]
+}

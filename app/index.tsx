@@ -7,7 +7,7 @@ import * as FileSystem from 'expo-file-system';  // Import FileSystem
 import { Platform } from 'react-native';
 
 export default function Index() {
-  type ImgItem = { uri: string; name: string; width: number; height: number; weight: number;};
+  type ImgItem = { uri: string; name: string; width: number; height: number; weight: number; quality?: number; original?: { uri: string; name: string; width: number; height: number; weight: number; quality?: number; } };
   const [stateImages, setStateImages] = useState<ImgItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modal2Visible, setModal2Visible] = useState(false);
@@ -40,7 +40,10 @@ export default function Index() {
         const derived = (asset as any).fileName
           ? (asset as any).fileName
           : uri.split('?')[0].split('#')[0].split('/').pop() || 'image.jpg';
-        return { uri, name: derived, width: asset.width, height: asset.height, weight: (asset.fileSize) || 0};
+        const isPng = /\.png$/i.test(derived) || /\.png(\?|#)/i.test(uri);
+        const original = { uri, name: derived, width: asset.width, height: asset.height, weight: (asset.fileSize) || 0, quality: 1 };
+        const item: ImgItem = { uri, name: derived, width: asset.width, height: asset.height, weight: (asset.fileSize) || 0, quality: 1, original };
+        return item;
       });
       setStateImages(prev => {
         const existing = new Set(prev.map(i => i.uri));
@@ -77,13 +80,37 @@ export default function Index() {
     const rotatedImages = await Promise.all(
       stateImages.map(async (item) => {
         const { manipulateAsync } = require('expo-image-manipulator');
-        const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { format: SaveFormat.JPEG, base64: true});
-        if (!result.base64) throw new Error('No base64 returned — make sure base64: true is set.');
-        const sizeBytes = base64SizeBytes(result.base64);
-        return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: sizeBytes};
+        const isPng = /\.png$/i.test(item.name) || /\.png(\?|#)/i.test(item.uri);
+        const desiredFormat = isPng ? SaveFormat.PNG : SaveFormat.JPEG;
+        const result = await manipulateAsync(item.uri, [{ rotate: 90 }], { 
+          format: desiredFormat,
+          compress: !isPng ? (item.quality ?? 1) : undefined
+        });
+        const sizeBytes = await getFileSizeFromUri(result.uri);
+        return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: sizeBytes, quality: isPng ? item.quality : (item.quality ?? 1), original: item.original ?? { uri: item.uri, name: item.name, width: item.width, height: item.height, weight: item.weight, quality: item.quality } };
       })
     );
     setStateImages(rotatedImages);
+  };
+
+  const resetOne = (cursorUri: string) => {
+    const orig = stateImages.find(i => i.uri === cursorUri)?.original;
+    setStateImages(prev => prev.map(img => {
+      if (img.uri !== cursorUri) return img;
+      if (!img.original) return img;
+      return {
+        ...img,
+        uri: img.original.uri,
+        name: img.original.name,
+        width: img.original.width,
+        height: img.original.height,
+        weight: img.original.weight,
+        quality: img.original.quality,
+      };
+    }));
+    if (orig && previewUri === cursorUri) {
+      setPreviewUri(orig.uri);
+    }
   };
 
   const deleteOne = (cursorUri: string) => {
@@ -98,14 +125,15 @@ export default function Index() {
     const rotatedImages = await Promise.all(
       stateImages.map(async (item) => {
         if (item.uri === cursorUri) {
+          const isPng = /\.png$/i.test(item.name) || /\.png(\?|#)/i.test(item.uri);
+          const desiredFormat = isPng ? SaveFormat.PNG : SaveFormat.JPEG;
           const result = await manipulateAsync(item.uri, [{ rotate: 90 }], {
-            format: SaveFormat.JPEG,
-            base64: true,
+            format: desiredFormat,
+            compress: !isPng ? (item.quality ?? 1) : undefined,
           });
-          if (!result.base64) throw new Error('No base64 returned — make sure base64: true is set.');
-          const sizeBytes = base64SizeBytes(result.base64);
+          const sizeBytes = await getFileSizeFromUri(result.uri);
           finalUri=result.uri;
-          return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: sizeBytes };
+          return { uri: result.uri, name: item.name, width: result.width, height: result.height, weight: sizeBytes, quality: isPng ? item.quality : (item.quality ?? 1), original: item.original ?? { uri: item.uri, name: item.name, width: item.width, height: item.height, weight: item.weight, quality: item.quality } };
         }
         // return unchanged item for all other images
         return item;
@@ -160,16 +188,16 @@ export default function Index() {
           format,
           // compression applies to JPEG/WEBP; PNG ignores it but it's harmless
           compress: a === 1 ? 1 : undefined,
-          base64: true,
         });
-        if (!result.base64) throw new Error('No base64 returned — make sure base64: true is set.');
-        const sizeBytes = base64SizeBytes(result.base64);
+        const sizeBytes = await getFileSizeFromUri(result.uri);
         return {
           uri: result.uri,
           name: toExt(item.name, newExt),
           width: result.width ?? item.width,
           height: result.height ?? item.height,
           weight: sizeBytes,
+          quality: a === 1 ? 1 : item.quality,
+          original: item.original ?? { uri: item.uri, name: item.name, width: item.width, height: item.height, weight: item.weight, quality: item.quality },
         };
       })
     );
@@ -193,31 +221,34 @@ export default function Index() {
       return `${base}${ext}`;
     };
     const newName = withExt(item.name, isPng ? '.png' : '.jpg');
+    // compute relative quality for JPEG; PNG ignores compression
+    const baseQ = item.quality ?? 1;
+    const q = Math.max(0.01, Math.min(1, baseQ * compression));
     let result;
     if (h > 0 && w === 0) {
       result = await manipulateAsync(
         item.uri,
         [{ resize: { height: h } }],
-        { format: desiredFormat, compress: compression }
+        { format: desiredFormat, compress: !isPng ? q : undefined }
       );
     } else if (h === 0 && w > 0) {
       result = await manipulateAsync(
         item.uri,
         [{ resize: { width: w } }],
-        { format: desiredFormat, compress: compression }
+        { format: desiredFormat, compress: !isPng ? q : undefined }
       );
     } else if (h > 0 && w > 0) {
       result = await manipulateAsync(
         item.uri,
         [{ resize: { width: w, height: h } }],
-        { format: desiredFormat, compress: compression }
+        { format: desiredFormat, compress: !isPng ? q : undefined }
       );
     } else if (h === 0 && w === 0) {
       // Recompress/reformat without resizing
       result = await manipulateAsync(
         item.uri,
         [],
-        { format: desiredFormat, compress: compression }
+        { format: desiredFormat, compress: !isPng ? q : undefined }
       );
     } else {
       // Fallback: reset and keep original item
@@ -232,6 +263,8 @@ export default function Index() {
       width: result.width,
       height: result.height,
       weight: actualSize,
+      quality: isPng ? item.quality : q,
+      original: item.original ?? { uri: item.uri, name: item.name, width: item.width, height: item.height, weight: item.weight, quality: item.quality },
     };
     // Keep preview in sync if this was being previewed
     if (previewUri === item.uri) {
@@ -265,32 +298,36 @@ export default function Index() {
         };
         const newName = withExt(item.name, isPng ? '.png' : '.jpg');
 
+        // compute relative quality for JPEG; PNG ignores compression
+        const baseQ = item.quality ?? 1;
+        const q = Math.max(0.01, Math.min(1, baseQ * compression));
+
         let result;
 
         if (h > 0 && w == 0) {
           result = await manipulateAsync(
             item.uri,
             [{ resize: { height: h } }],
-            { format: desiredFormat, compress: !isPng ? compression : compression }
+            { format: desiredFormat, compress: !isPng ? q : undefined }
           );
         } else if (h == 0 && w > 0) {
           result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w } }],
-            { format: desiredFormat, compress: !isPng ? compression : compression }
+            { format: desiredFormat, compress: !isPng ? q : undefined }
           );
         } else if (h > 0 && w > 0) {
           result = await manipulateAsync(
             item.uri,
             [{ resize: { width: w, height: h } }],
-            { format: desiredFormat, compress: !isPng ? compression : compression }
+            { format: desiredFormat, compress: !isPng ? q : undefined }
           ); 
         } else if (h == 0  && w == 0) {
           // Even with 0,0 resize parameters, we still use manipulateAsync to apply the compression/format change
           result = await manipulateAsync(
             item.uri,
             [], // Empty actions array
-            { format: desiredFormat, compress: !isPng ? compression : compression }
+            { format: desiredFormat, compress: !isPng ? q : undefined }
           );
         } else {
           // If logic somehow falls through, reset inputs and return original item
@@ -308,7 +345,9 @@ export default function Index() {
           name: newName, 
           width: result.width, 
           height: result.height,
-          weight: actualSize // Include the new size in the state object
+          weight: actualSize, // Include the new size in the state object
+          quality: isPng ? item.quality : q,
+          original: item.original ?? { uri: item.uri, name: item.name, width: item.width, height: item.height, weight: item.weight, quality: item.quality },
         };
       })
     );
@@ -442,6 +481,7 @@ export default function Index() {
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
             <Text style={styles.thumbRes}>{(item.weight/1024).toFixed(2)} KB</Text>
             <Text style={styles.thumbRes} onPress={() => {setResizeTargetUri(item.uri); setModal4Visible(true);}}>Resize</Text>
+            <Text style={styles.thumbRes} onPress={() => resetOne(item.uri)}>Reset</Text>
             <Text style={styles.thumbRes} onPress={() => deleteOne(item.uri)}>Delete</Text>
           </View>
         )}
