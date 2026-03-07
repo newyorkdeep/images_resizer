@@ -93,7 +93,7 @@ export default function Index() {
     setStateImages(rotatedImages);
   };
 
-  const resetOne = (cursorUri: string) => {
+  const resetOne = (cursorUri: string | null) => {
     const orig = stateImages.find(i => i.uri === cursorUri)?.original;
     setStateImages(prev => prev.map(img => {
       if (img.uri !== cursorUri) return img;
@@ -111,6 +111,14 @@ export default function Index() {
     if (orig && previewUri === cursorUri) {
       setPreviewUri(orig.uri);
     }
+  };
+
+  const resetAll = async () => {
+    const resetedImages = await Promise.all(
+      stateImages.map(async (item) => {
+        return resetOne(item.uri);
+      })
+    )
   };
 
   const deleteOne = (cursorUri: string) => {
@@ -420,6 +428,61 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
+
+      {/* A MODAL THAT OPENS UP FOR RESIZING ALL PICTURESS */}
+
+      <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
+        <View style={styles.modall}>
+          <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
+          <Text>New Width:</Text>
+          <TextInput style={styles.textinput} onChangeText={(value) => {
+            setResizeWidth(Number(value));
+          }}></TextInput> <p></p>
+          <Text>New Height:</Text>
+          <TextInput style={styles.textinput} onChangeText={(value) => {
+            setResizeHeight(Number(value));
+          }}></TextInput> <p></p>
+          <Text>JPEG Compression*</Text>
+          <TextInput style={styles.textinput} onChangeText={(value) => {
+            setCompression(Number(value)*0.01);
+          }}></TextInput> <p></p>
+          <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
+          <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth, compression); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
+          <Text> </Text>
+          <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
+          <Text>* 100% is the best quality, 0% is the lowest.</Text>
+        </View>
+      </Modal>
+
+      {/* A MODAL THAT OPENS UP FOR CONVERTING ALL PICTURESS */}
+
+      <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
+        <View style={styles.modall}>
+          <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
+          <TouchableOpacity style={styles.button1} onPress={() => {convertAll(1); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to JPG</Text></TouchableOpacity>
+          <Text> </Text>
+          <TouchableOpacity style={styles.button1} onPress={() => {convertAll(2); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to PNG</Text></TouchableOpacity>
+          <Text> </Text>
+          <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>                  
+        </View>
+      </Modal>
+
+      {/* A MODAL THAT OPENS UP WHEN YOU RENAME ALL PICTURES */}
+
+      <Modal animationType='slide' transparent={false} visible={modal3Visible} onRequestClose={() => {setModal3Visible(!modal2Visible);}}>
+        <View style={styles.modall}>
+          <Text style={{alignSelf: 'center'}}>Configure Renaming Options</Text> <p></p>
+          <TextInput style={styles.textinput} onChangeText={(value) => {
+            setNameTag(value);
+          }}></TextInput> <p></p>
+          <TouchableOpacity style={styles.button1} onPress={() => {renameAll(nameTag); setModal3Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
+          <Text> </Text>
+          <TouchableOpacity style={styles.button1} onPress={() => setModal3Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* A MODAL THAT OPENS UP RESIZE OPTION FOR SINGLE PICTURE THAT YOU PREVIEW RN */}
+
       <Modal animationType='slide' transparent={false} visible={modal4Visible} onRequestClose={() => {setModal4Visible(!modalVisible);}}>
         <View style={styles.modall}>
           <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
@@ -442,7 +505,29 @@ export default function Index() {
           <Text>* 100% is the best quality, 0% is the lowest.</Text>
         </View>
       </Modal>
-      <FlatList style={styles.flatList}                               //this is a flatlist that holds opened images!!!
+
+      {/* THIS IS A MODAL THAT OPENS UP WHEN YOU PREVIEW A PICTURE*/}
+
+      <Modal visible={previewModalVisible} animationType='slide' transparent={false}>
+        <View style={styles.modall}>
+          {previewUri && (
+            <Image source={{ uri: previewUri }} style={styles.fullview}/>
+          )}
+          <View style={styles.horizview}>
+            <TouchableOpacity style={styles.button3} onPress={()=>rotateOne(previewUri)}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
+            <Text> </Text>
+            <TouchableOpacity style={styles.button3} onPress={()=>downloadOne(previewUri)}><Text style={styles.textinside}>Download</Text></TouchableOpacity>
+            <Text> </Text>
+            <TouchableOpacity style={styles.button3} onPress={()=>resetOne(previewUri)}><Text style={styles.textinside}>Reset</Text></TouchableOpacity>
+            <Text> </Text>
+            <TouchableOpacity style={styles.button3} onPress={closePreview}><Text style={styles.textinside}>Close</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* THIS IS A FLATLIST THAT HOLDS UPLOADED IMAGES */}
+
+      <FlatList style={styles.flatList}                               
         scrollEnabled
         horizontal
         data={stateImages}
@@ -480,79 +565,26 @@ export default function Index() {
             )}
             <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
             <Text style={styles.thumbRes}>{(item.weight/1024).toFixed(2)} KB</Text>
-            <Text style={styles.thumbRes} onPress={() => {setResizeTargetUri(item.uri); setModal4Visible(true);}}>Resize</Text>
-            <Text style={styles.thumbRes} onPress={() => resetOne(item.uri)}>Reset</Text>
-            <Text style={styles.thumbRes} onPress={() => deleteOne(item.uri)}>Delete</Text>
+            <Text style={styles.thumbRes1} onPress={() => {setResizeTargetUri(item.uri); setModal4Visible(true);}}>Resize</Text>
+            <Text style={styles.thumbRes1} onPress={() => deleteOne(item.uri)}>Delete</Text>
           </View>
         )}
       />
-      <Modal visible={previewModalVisible} animationType='slide' transparent={false}>
-        <View style={styles.modall}>
-          {previewUri && (
-            <Image source={{ uri: previewUri }} style={styles.fullview}/>
-          )}
-          <View style={styles.horizview}>
-            <TouchableOpacity style={styles.button3} onPress={()=>rotateOne(previewUri)}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button3} onPress={()=>downloadOne(previewUri)}><Text style={styles.textinside}>Download</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button3} onPress={closePreview}><Text style={styles.textinside}>Close</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      
+      {/* MAIN BOTTOM PANNEL WITH THE MAIN BUTTONS IN THE MAIN SCREEN */}
+
       <View style={styles.horizview}>                              
         <TouchableOpacity style={styles.button0} onPress={pickImage}><Text style={styles.textinside}>Upload</Text></TouchableOpacity>
         <Text>  </Text>
         <TouchableOpacity style={styles.button0} onPress={reload}><Text style={styles.textinside}>Reload</Text></TouchableOpacity>
         <Text>  </Text>
         <TouchableOpacity style={styles.button0} onPress={() => setModalVisible(true)}><Text style={styles.textinside}>Resize</Text></TouchableOpacity>
-        <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
-          <View style={styles.modall}>
-            <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
-            <Text>New Width:</Text>
-            <TextInput style={styles.textinput} onChangeText={(value) => {
-              setResizeWidth(Number(value));
-            }}></TextInput> <p></p>
-            <Text>New Height:</Text>
-            <TextInput style={styles.textinput} onChangeText={(value) => {
-              setResizeHeight(Number(value));
-            }}></TextInput> <p></p>
-            <Text>JPEG Compression*</Text>
-            <TextInput style={styles.textinput} onChangeText={(value) => {
-              setCompression(Number(value)*0.01);
-            }}></TextInput> <p></p>
-            <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
-            <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth, compression); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
-            <Text>* 100% is the best quality, 0% is the lowest.</Text>
-          </View>
-        </Modal>
         <Text>  </Text>
         <TouchableOpacity style={styles.button0} onPress={() => setModal2Visible(true)}><Text style={styles.textinside}>Convert</Text></TouchableOpacity>
-        <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
-          <View style={styles.modall}>
-            <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
-            <TouchableOpacity style={styles.button1} onPress={() => {convertAll(1); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to JPG</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button1} onPress={() => {convertAll(2); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to PNG</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button1} onPress={() => setModal2Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>                  
-          </View>
-        </Modal>
         <Text>  </Text>
         <TouchableOpacity style={styles.button0} onPress={() => setModal3Visible(true)}><Text style={styles.textinside}>Rename</Text></TouchableOpacity>
-        <Modal animationType='slide' transparent={false} visible={modal3Visible} onRequestClose={() => {setModal3Visible(!modal2Visible);}}>
-          <View style={styles.modall}>
-            <Text style={{alignSelf: 'center'}}>Configure Renaming Options</Text> <p></p>
-            <TextInput style={styles.textinput} onChangeText={(value) => {
-              setNameTag(value);
-            }}></TextInput> <p></p>
-            <TouchableOpacity style={styles.button1} onPress={() => {renameAll(nameTag); setModal3Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button1} onPress={() => setModal3Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
-          </View>
-        </Modal>
+        <Text>  </Text>
+        <TouchableOpacity style={styles.button0} onPress={resetAll}><Text style={styles.textinside}>Reset all</Text></TouchableOpacity>
         <Text>  </Text>
         <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Save</Text></TouchableOpacity>
       </View>
@@ -605,6 +637,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#555',
     marginTop: 2,
+  },
+  thumbRes1: {
+    fontSize: 10,
+    color: '#555',
+    marginTop: 8,
+    borderColor: '#999999',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 10,
+    paddingHorizontal: 20,
   },
   button0: {
     backgroundColor: '#e8e8e8',
