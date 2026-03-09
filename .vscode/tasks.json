@@ -4,9 +4,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "git fetch on open",
+            "label": "Pulling changes from GitHub on open",
             "type": "shell",
-            "command": "git fetch",
+            "command": "git pull",
             "presentation": {
                 "reveal": "silent"
             },

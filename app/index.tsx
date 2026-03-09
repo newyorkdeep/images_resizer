@@ -514,13 +514,13 @@ export default function Index() {
             <Image source={{ uri: previewUri }} style={styles.fullview}/>
           )}
           <View style={styles.horizview}>
-            <TouchableOpacity style={styles.button3} onPress={()=>rotateOne(previewUri)}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button3} onPress={()=>downloadOne(previewUri)}><Text style={styles.textinside}>Download</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button3} onPress={()=>resetOne(previewUri)}><Text style={styles.textinside}>Reset</Text></TouchableOpacity>
-            <Text> </Text>
-            <TouchableOpacity style={styles.button3} onPress={closePreview}><Text style={styles.textinside}>Close</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.thumbRes2} onPress={()=>rotateOne(previewUri)}><Text style={styles.textinside}>Rotate</Text></TouchableOpacity>
+            <Text>   </Text>
+            <TouchableOpacity style={styles.thumbRes2} onPress={()=>downloadOne(previewUri)}><Text style={styles.textinside}>Download</Text></TouchableOpacity>
+            <Text>   </Text>
+            <TouchableOpacity style={styles.thumbRes2} onPress={()=>resetOne(previewUri)}><Text style={styles.textinside}>Reset</Text></TouchableOpacity>
+            <Text>   </Text>
+            <TouchableOpacity style={styles.thumbRes2} onPress={closePreview}><Text style={styles.textinside}>Close</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -647,6 +647,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 10,
     paddingHorizontal: 20,
+  },
+  thumbRes2: { //THE SAME AS THUMBRES1 BUT WITH FIXED LENGTH
+    fontSize: 10,
+    color: '#555',
+    marginTop: 8,
+    borderColor: '#999999',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 10,
+    paddingHorizontal: 20,
+    width: 70,
   },
   button0: {
     backgroundColor: '#e8e8e8',
