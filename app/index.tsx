@@ -584,7 +584,7 @@ export default function Index() {
         <Text>  </Text>
         <TouchableOpacity style={styles.button0} onPress={() => setModal3Visible(true)}><Text style={styles.textinside}>Rename</Text></TouchableOpacity>
         <Text>  </Text>
-        <TouchableOpacity style={styles.button0} onPress={resetAll}><Text style={styles.textinside}>Reset all</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.button0} onPress={resetAll}><Text style={styles.textinside}>Reset</Text></TouchableOpacity>
         <Text>  </Text>
         <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Save</Text></TouchableOpacity>
       </View>
