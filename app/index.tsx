@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#e7e7e7ff',
-    alignItems: 'flex-start',  //decides where is the line of content is gonn be, on the top or bottom
+    alignItems: 'center',  //decides where is the line of content is gonn be, on the top or bottom
     flexDirection: 'column',
   },
   textinside: {
@@ -613,6 +613,9 @@ const styles = StyleSheet.create({
   },
   thumbnailList: {
     paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexGrow: 1,
   },
   thumbItem: {
     width: 210,
@@ -698,7 +701,8 @@ const styles = StyleSheet.create({
   },
   flatList: {
     width: '100%',
-    marginTop: 16, 
+    marginTop: 16,
+    flexGrow: 1,
   },
   slider: {
     flex: 1,
