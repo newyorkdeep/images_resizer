@@ -385,9 +385,10 @@ export default function Index() {
   };
 
   const downloadAll = async () => {
-    for (let i=0; i<stateImages.length;i++) {
-      downloadImage(stateImages[i].uri, stateImages[i].name);
-    }
+    stateImages.forEach(img => {
+      console.log(`Downloading ${img.name}`);
+      downloadImage(img.uri, img.name);
+    });
   };
 
   const downloadOne = async (uri: string | null) => {
@@ -398,7 +399,8 @@ export default function Index() {
     }
   };
 
-  const commitRename = () => {
+  // Renames the image when you click on the name 
+  const commitRename = () => { 
     if (!editingUri) return;
     setStateImages(imgs =>
       imgs.map(img =>
