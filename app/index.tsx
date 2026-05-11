@@ -435,20 +435,20 @@ export default function Index() {
 
       <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
         <View style={styles.modall}>
-          <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
+          <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> 
           <Text>New Width:</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setResizeWidth(Number(value));
-          }}></TextInput> <p></p>
+          }}></TextInput> 
           <Text>New Height:</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setResizeHeight(Number(value));
-          }}></TextInput> <p></p>
+          }}></TextInput> 
           <Text>JPEG Compression*</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setCompression(Number(value)*0.01);
-          }}></TextInput> <p></p>
-          <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
+          }}></TextInput> 
+          <Text>Selected: {(compression * 100).toFixed(0)}%</Text> 
           <TouchableOpacity style={styles.button1} onPress={() => {resizeAll(resizeHeight, resizeWidth, compression); setModalVisible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
           <Text> </Text>
           <TouchableOpacity style={styles.button1} onPress={() => setModalVisible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
@@ -460,7 +460,7 @@ export default function Index() {
 
       <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
         <View style={styles.modall}>
-          <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> <p></p>
+          <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> 
           <TouchableOpacity style={styles.button1} onPress={() => {convertAll(1); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to JPG</Text></TouchableOpacity>
           <Text> </Text>
           <TouchableOpacity style={styles.button1} onPress={() => {convertAll(2); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to PNG</Text></TouchableOpacity>
@@ -473,10 +473,10 @@ export default function Index() {
 
       <Modal animationType='slide' transparent={false} visible={modal3Visible} onRequestClose={() => {setModal3Visible(!modal2Visible);}}>
         <View style={styles.modall}>
-          <Text style={{alignSelf: 'center'}}>Configure Renaming Options</Text> <p></p>
+          <Text style={{alignSelf: 'center'}}>Configure Renaming Options</Text> 
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setNameTag(value);
-          }}></TextInput> <p></p>
+          }}></TextInput> 
           <TouchableOpacity style={styles.button1} onPress={() => {renameAll(nameTag); setModal3Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
           <Text> </Text>
           <TouchableOpacity style={styles.button1} onPress={() => setModal3Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
@@ -487,20 +487,20 @@ export default function Index() {
 
       <Modal animationType='slide' transparent={false} visible={modal4Visible} onRequestClose={() => {setModal4Visible(!modalVisible);}}>
         <View style={styles.modall}>
-          <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> <p></p>
+          <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> 
           <Text>New Width:</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setResizeWidth(Number(value));
-          }}></TextInput> <p></p>
+          }}></TextInput> 
           <Text>New Height:</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setResizeHeight(Number(value));
-          }}></TextInput> <p></p>
+          }}></TextInput> 
           <Text>JPEG Compression*</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setCompression(Number(value)*0.01);
-          }}></TextInput> <p></p>
-          <Text>Selected: {(compression * 100).toFixed(0)}%</Text> <p></p>
+          }}></TextInput> 
+          <Text>Selected: {(compression * 100).toFixed(0)}%</Text> 
           <TouchableOpacity style={styles.button1} onPress={() => { if(resizeTargetUri) { resizeOne(resizeHeight, resizeWidth, compression, resizeTargetUri); } setModal4Visible(false); setResizeTargetUri(null);}}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
           <Text> </Text>
           <TouchableOpacity style={styles.button1} onPress={() => {setModal4Visible(false); setResizeTargetUri(null);}}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
