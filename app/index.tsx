@@ -431,11 +431,12 @@ export default function Index() {
   return (
     <View style={styles.container}>
 
-      {/* A MODAL THAT OPENS UP FOR RESIZING ALL PICTURESS */}
+      {/* RESIZING ALL PICTURESS MODAL */}
 
       <Modal animationType='slide' transparent={false} visible={modalVisible} onRequestClose={() => {setModalVisible(!modalVisible);}}>
         <View style={styles.modall}>
           <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> 
+          <Text> </Text>
           <Text>New Width:</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setResizeWidth(Number(value));
@@ -456,11 +457,12 @@ export default function Index() {
         </View>
       </Modal>
 
-      {/* A MODAL THAT OPENS UP FOR CONVERTING ALL PICTURESS */}
+      {/* CONVERTING ALL PICTURESS MODAL */}
 
       <Modal animationType='slide' transparent={false} visible={modal2Visible} onRequestClose={() => {setModal2Visible(!modal2Visible);}}>
         <View style={styles.modall}>
           <Text style={{alignSelf: 'center'}}>Configure Converting Options</Text> 
+          <Text> </Text>
           <TouchableOpacity style={styles.button1} onPress={() => {convertAll(1); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to JPG</Text></TouchableOpacity>
           <Text> </Text>
           <TouchableOpacity style={styles.button1} onPress={() => {convertAll(2); setModal2Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Convert to PNG</Text></TouchableOpacity>
@@ -469,25 +471,28 @@ export default function Index() {
         </View>
       </Modal>
 
-      {/* A MODAL THAT OPENS UP WHEN YOU RENAME ALL PICTURES */}
+      {/* RENAME ALL PICTURES MODAL */}
 
       <Modal animationType='slide' transparent={false} visible={modal3Visible} onRequestClose={() => {setModal3Visible(!modal2Visible);}}>
         <View style={styles.modall}>
           <Text style={{alignSelf: 'center'}}>Configure Renaming Options</Text> 
+          <Text> </Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setNameTag(value);
-          }}></TextInput> 
+          }}></TextInput>
+          <Text> </Text> 
           <TouchableOpacity style={styles.button1} onPress={() => {renameAll(nameTag); setModal3Visible(false); }}><Text style={{color: 'black', alignSelf: 'center'}}>Apply</Text></TouchableOpacity>
           <Text> </Text>
           <TouchableOpacity style={styles.button1} onPress={() => setModal3Visible(false)}><Text style={{color: 'black', alignSelf: 'center'}}>Close</Text></TouchableOpacity>
         </View>
       </Modal>
 
-      {/* A MODAL THAT OPENS UP RESIZE OPTION FOR SINGLE PICTURE THAT YOU PREVIEW RN */}
+      {/* RESIZE OPTION FOR SINGLE PICTURE THAT YOU PREVIEW RN MODAL */}
 
       <Modal animationType='slide' transparent={false} visible={modal4Visible} onRequestClose={() => {setModal4Visible(!modalVisible);}}>
         <View style={styles.modall}>
           <Text style={{alignSelf: 'center'}}>Configure Resize Options</Text> 
+          <Text> </Text>
           <Text>New Width:</Text>
           <TextInput style={styles.textinput} onChangeText={(value) => {
             setResizeWidth(Number(value));
@@ -508,7 +513,7 @@ export default function Index() {
         </View>
       </Modal>
 
-      {/* THIS IS A MODAL THAT OPENS UP WHEN YOU PREVIEW A PICTURE*/}
+      {/* PREVIEW A PICTURE MODAL */}
 
       <Modal visible={previewModalVisible} animationType='slide' transparent={false}>
         <View style={styles.modall}>
