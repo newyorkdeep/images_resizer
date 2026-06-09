@@ -2,9 +2,14 @@ import { Image } from 'expo-image';
 import { ImageManipulator, SaveFormat, useImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useRef } from 'react';
-import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput } from "react-native";
+import { Button, FlatList, StyleSheet, Text, View, Pressable, TouchableOpacity, Modal, TextInput, Animated, PanResponder} from "react-native";
 import * as FileSystem from 'expo-file-system';  // Import FileSystem
 import { Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'; 
+
+const CARD_WIDTH = 170;
+const CARD_MARGIN = 8;
+const FULL_CARD_WIDTH = CARD_WIDTH + (CARD_MARGIN * 2); // 186px total horizontal footprint
 
 export default function Index() {
   type ImgItem = { uri: string; name: string; width: number; height: number; weight: number; quality?: number; original?: { uri: string; name: string; width: number; height: number; weight: number; quality?: number; } };
@@ -24,6 +29,11 @@ export default function Index() {
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [resizeTargetUri, setResizeTargetUri] = useState<string | null>(null);
+
+  // DRAG INTERACTION STATE & REFS
+  const [activeDragIndex, setActiveDragIndex] = useState<number | null>(null);
+  const pan = useRef(new Animated.ValueXY()).current;
+  const dragIndexRef = useRef<number | null>(null);
 
   //UPLOADING IMAGES TO PROGRAM
   const pickImage = async () => {
@@ -52,6 +62,37 @@ export default function Index() {
       });
     }
   };
+
+  // GESTURE ENGINE INITIALIZER
+  const createPanResponder = (index: number) => PanResponder.create({
+    onStartShouldSetPanResponder: () => false, 
+    onMoveShouldSetPanResponder: () => dragIndexRef.current === index, 
+    onPanResponderGrant: () => {
+      pan.setOffset({ x: pan.x._value, y: 0 });
+      pan.setValue({ x: 0, y: 0 });
+    },
+    onPanResponderMove: Animated.event([null, { dx: pan.x, dy: new Animated.Value(0) }], { useNativeDriver: false }),
+    onPanResponderRelease: (_, gestureState) => {
+      pan.flattenOffset();
+      const currentIndex = dragIndexRef.current;
+      
+      if (currentIndex !== null) {
+        const passedCards = Math.round(gestureState.dx / FULL_CARD_WIDTH);
+        let targetIndex = currentIndex + passedCards;
+        targetIndex = Math.max(0, Math.min(targetIndex, stateImages.length - 1));
+
+        if (targetIndex !== currentIndex) {
+          const updatedList = [...stateImages];
+          const [draggedItem] = updatedList.splice(currentIndex, 1);
+          updatedList.splice(targetIndex, 0, draggedItem);
+          setStateImages(updatedList); // Order update naturally reconfigures the Batch Rename indexing suffix!
+        }
+      }
+      dragIndexRef.current = null;
+      setActiveDragIndex(null);
+      pan.setValue({ x: 0, y: 0 });
+    }
+  });
 
   //DOWNLOADING IMAGES
   const downloadImage = (imageUri: string, filename: string) => {
@@ -429,6 +470,7 @@ export default function Index() {
   };
 
   return (
+    <SafeAreaView style={styles.container}>
     <View style={styles.container}>
 
       {/* RESIZING ALL PICTURESS MODAL */}
@@ -533,50 +575,98 @@ export default function Index() {
       </Modal>
 
       {/* THIS IS A FLATLIST THAT HOLDS UPLOADED IMAGES */}
+      <View style={styles.flatList}>
+        <Animated.ScrollView
+          horizontal
+          scrollEnabled={activeDragIndex === null} // Stops the list from scrolling when dragging an item
+          style={styles.flatList}
+          contentContainerStyle={styles.thumbnailList}
+          showsHorizontalScrollIndicator={false}
+        >
+          {stateImages.map((item, index) => {
+            const isCurrentDragging = activeDragIndex === index;
+            const itemPanResponder = createPanResponder(index);
 
-      <FlatList style={styles.flatList}                               
-        scrollEnabled
-        horizontal
-        data={stateImages}
-        keyExtractor={(item, i) => `${item.uri}-${i}`}
-        contentContainerStyle={styles.thumbnailList}
-        renderItem={({ item }) => (
-          <View style={styles.thumbItem}>
-            <Pressable onPress={()=>openPreview(item.uri)}>
-              <Image source={{ uri: item.uri }} style={styles.thumbnail}/>
-            </Pressable>
-            {editingUri === item.uri ? (
-              <TextInput
-              style={styles.thumbName}
-              value={draftName}
-              onChangeText={setDraftName}
-              autoFocus
-              onSubmitEditing={commitRename}
-              onBlur={commitRename}
-              returnKeyType="done"
-              />
-            ):(
-              <Text style={styles.thumbName} onPress={()=> {
-                setEditingUri(item.uri);
-                setDraftName(item.name);
-              }}>
-                {item.name.length <= 100
-                  ? item.name
-                  : (() => {
-                      const extIdx = item.name.lastIndexOf('.');
-                      const ext = extIdx !== -1 ? item.name.substring(extIdx) : '';
-                      const truncated = item.name.substring(0, 100 - ext.length - 3);
-                      return truncated + '...' + ext;
-                    })()}
-              </Text>
-            )}
-            <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
-            <Text style={styles.thumbRes}>{(item.weight/1024).toFixed(2)} KB</Text>
-            <Text style={styles.thumbRes1} onPress={() => {setResizeTargetUri(item.uri); setModal4Visible(true);}}>Resize</Text>
-            <Text style={styles.thumbRes1} onPress={() => deleteOne(item.uri)}>Delete</Text>
-          </View>
-        )}
-      />
+            return (
+              <Animated.View
+                key={`${item.uri}-${index}`}
+                {...itemPanResponder.panHandlers}
+                style={[
+                  styles.thumbItem,
+                  isCurrentDragging && {
+                    transform: [{ translateX: pan.x }, { scale: 1.05 }],
+                    backgroundColor: '#f0f0f0',
+                    zIndex: 99,         // like layers in Photoshop, 99 means the highest
+                    elevation: 5,       // Android only prop
+                    borderRadius: 16, 
+                    overflow: 'hidden',
+                  }
+                ]}
+              >
+                {/* Long pressing explicitly anywhere on this area triggers the movement */}
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  delayLongPress={100}
+                  onLongPress={() => {
+                    dragIndexRef.current = index;
+                    setActiveDragIndex(index);
+                  }}
+                  style={styles.cardHeaderTouchable}
+                >
+                  <Pressable
+                    onPress={() => openPreview(item.uri)}
+                    delayLongPress={100}
+                    onLongPress={() => {
+                      // Duplicating this here ensures dragging triggers when holding the image directly
+                      dragIndexRef.current = index;
+                      setActiveDragIndex(index);
+                    }}
+                    style={{ userSelect: 'none' }}
+                  >
+                    <Image 
+                      source={{ uri: item.uri }} 
+                      style={styles.thumbnail}
+                      draggable={false}
+                      {...({ draggable: false } as any)} // TypeScript safety bypass for web targets
+                    />
+                  </Pressable>
+
+                  {editingUri === item.uri ? (
+                    <TextInput
+                      style={styles.thumbName}
+                      value={draftName}
+                      onChangeText={setDraftName}
+                      autoFocus
+                      onSubmitEditing={commitRename}
+                      onBlur={commitRename}
+                      returnKeyType="done"
+                    />
+                  ) : (
+                    <Text style={styles.thumbName} onPress={() => {
+                      setEditingUri(item.uri);
+                      setDraftName(item.name);
+                    }}>
+                      {item.name.length <= 100
+                        ? item.name
+                        : item.name.substring(0, 97) + '...'}
+                    </Text>
+                  )}
+                
+
+                  {/* Plain metadata text blocks */}
+                  <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
+                  <Text style={styles.thumbRes}>{(item.weight / 1024).toFixed(2)} KB</Text>
+                  
+                  {/* Context interaction text tags */}
+                  <Text style={styles.thumbRes1} onPress={() => { setResizeTargetUri(item.uri); setModal4Visible(true); }}>Resize</Text>
+                  <Text style={styles.thumbRes1} onPress={() => deleteOne(item.uri)}>Delete</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
+        </Animated.ScrollView>
+      </View>
+      
       
       {/* MAIN BOTTOM PANNEL WITH THE MAIN BUTTONS IN THE MAIN SCREEN */}
 
@@ -596,6 +686,7 @@ export default function Index() {
         <TouchableOpacity style={styles.button0} onPress={downloadAll}><Text style={styles.textinside}>Save</Text></TouchableOpacity>
       </View>
     </View>
+    </SafeAreaView>
   );
 }
 
@@ -730,5 +821,6 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     alignSelf: 'center',
     marginBottom: 10,
-  }
+  },
+  cardHeaderTouchable: { width: '100%', alignItems: 'center' },
 })
