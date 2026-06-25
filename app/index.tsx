@@ -577,11 +577,10 @@ export default function Index() {
       {/* THIS IS A FLATLIST THAT HOLDS UPLOADED IMAGES */}
       <View style={styles.flatList}>
         <Animated.ScrollView
-          horizontal
-          scrollEnabled={activeDragIndex === null} // Stops the list from scrolling when dragging an item
-          style={styles.flatList}
+          scrollEnabled={activeDragIndex === null} 
+          style={styles.scrollView}
           contentContainerStyle={styles.thumbnailList}
-          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
         >
           {stateImages.map((item, index) => {
             const isCurrentDragging = activeDragIndex === index;
@@ -594,16 +593,15 @@ export default function Index() {
                 style={[
                   styles.thumbItem,
                   isCurrentDragging && {
-                    transform: [{ translateX: pan.x }, { scale: 1.05 }],
+                    transform: [{ translateX: pan.x }, { translateY: pan.y }, { scale: 1.05 }], // Added translateY for vertical movement
                     backgroundColor: '#f0f0f0',
-                    zIndex: 99,         // like layers in Photoshop, 99 means the highest
-                    elevation: 5,       // Android only prop
+                    zIndex: 99,         
+                    elevation: 5,       
                     borderRadius: 16, 
                     overflow: 'hidden',
                   }
                 ]}
               >
-                {/* Long pressing explicitly anywhere on this area triggers the movement */}
                 <TouchableOpacity
                   activeOpacity={0.9}
                   delayLongPress={100}
@@ -617,7 +615,6 @@ export default function Index() {
                     onPress={() => openPreview(item.uri)}
                     delayLongPress={100}
                     onLongPress={() => {
-                      // Duplicating this here ensures dragging triggers when holding the image directly
                       dragIndexRef.current = index;
                       setActiveDragIndex(index);
                     }}
@@ -627,7 +624,7 @@ export default function Index() {
                       source={{ uri: item.uri }} 
                       style={styles.thumbnail}
                       draggable={false}
-                      {...({ draggable: false } as any)} // TypeScript safety bypass for web targets
+                      {...({ draggable: false } as any)} 
                     />
                   </Pressable>
 
@@ -653,11 +650,9 @@ export default function Index() {
                   )}
                 
 
-                  {/* Plain metadata text blocks */}
                   <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
                   <Text style={styles.thumbRes}>{(item.weight / 1024).toFixed(2)} KB</Text>
                   
-                  {/* Context interaction text tags */}
                   <Text style={styles.thumbRes1} onPress={() => { setResizeTargetUri(item.uri); setModal4Visible(true); }}>Resize</Text>
                   <Text style={styles.thumbRes1} onPress={() => deleteOne(item.uri)}>Delete</Text>
                 </TouchableOpacity>
@@ -697,6 +692,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',  //decides where is the line of content is gonn be, on the top or bottom
     flexDirection: 'column',
   },
+  flatList: {
+    width: '100%',
+    marginTop: 16,
+    justifyContent: 'center', // Centers the inner ScrollView vertically
+    flex: 1,                  // Fills the screen area to provide a centering boundary
+  },
+  scrollView: {
+    width: '100%',
+    flexGrow: 0,              // Prevents the ScrollView container from expanding when empty
+  },
+  thumbnailList: {
+    paddingHorizontal: 12,
+    paddingVertical: 16,      // Prevents content touching screen edges when tight
+    flexDirection: 'row',     
+    flexWrap: 'wrap',         
+    justifyContent: 'center', // Centers items horizontally within rows
+    alignItems: 'center',     // Centers items vertically within their rows
+  },
+  thumbItem: {
+    width: 210,
+    height: 380,              
+    alignItems: 'center',
+    marginHorizontal: 8,
+    marginVertical: 12,       
+  },
   textinside: {
     fontSize: 12,
     alignSelf: 'center',
@@ -708,17 +728,6 @@ const styles = StyleSheet.create({
     width: 200,
     borderRadius: 19,
     margin: 2,
-  },
-  thumbnailList: {
-    paddingHorizontal: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexGrow: 1,
-  },
-  thumbItem: {
-    width: 210,
-    alignItems: 'center',
-    marginHorizontal: 4,
   },
   thumbnail: {
     width: 200,
@@ -796,11 +805,6 @@ const styles = StyleSheet.create({
   textinput: {
     paddingVertical: 19,
     width: 600,
-  },
-  flatList: {
-    width: '100%',
-    marginTop: 16,
-    flexGrow: 1,
   },
   slider: {
     flex: 1,
