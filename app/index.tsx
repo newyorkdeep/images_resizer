@@ -627,35 +627,36 @@ export default function Index() {
                       {...({ draggable: false } as any)} 
                     />
                   </Pressable>
-
-                  {editingUri === item.uri ? (
-                    <TextInput
-                      style={styles.thumbName}
-                      value={draftName}
-                      onChangeText={setDraftName}
-                      autoFocus
-                      onSubmitEditing={commitRename}
-                      onBlur={commitRename}
-                      returnKeyType="done"
-                    />
-                  ) : (
-                    <Text style={styles.thumbName} onPress={() => {
-                      setEditingUri(item.uri);
-                      setDraftName(item.name);
-                    }}>
-                      {item.name.length <= 100
-                        ? item.name
-                        : item.name.substring(0, 97) + '...'}
-                    </Text>
-                  )}
-                
-
-                  <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
-                  <Text style={styles.thumbRes}>{(item.weight / 1024).toFixed(2)} KB</Text>
-                  
-                  <Text style={styles.thumbRes1} onPress={() => { setResizeTargetUri(item.uri); setModal4Visible(true); }}>Resize</Text>
-                  <Text style={styles.thumbRes1} onPress={() => deleteOne(item.uri)}>Delete</Text>
                 </TouchableOpacity>
+
+                {editingUri === item.uri ? (
+                  <TextInput
+                    style={styles.thumbName}
+                    value={draftName}
+                    onChangeText={setDraftName}
+                    autoFocus
+                    onSubmitEditing={commitRename}
+                    onBlur={commitRename}
+                    returnKeyType="done"
+                  />
+                ) : (
+                  <Text style={styles.thumbName} onPress={() => {
+                    setEditingUri(item.uri);
+                    setDraftName(item.name);
+                  }}>
+                    {item.name.length <= 100
+                      ? item.name
+                      : item.name.substring(0, 97) + '...'}
+                  </Text>
+                )}
+              
+
+                <Text style={styles.thumbRes}>{item.width} x {item.height}</Text>
+                <Text style={styles.thumbRes}>{(item.weight / 1024).toFixed(2)} KB</Text>
+                
+                <Text style={styles.thumbRes1} onPress={() => { setResizeTargetUri(item.uri); setModal4Visible(true); }}>Resize</Text>
+                <Text style={styles.thumbRes1} onPress={() => deleteOne(item.uri)}>Delete</Text>
+                
               </Animated.View>
             );
           })}
